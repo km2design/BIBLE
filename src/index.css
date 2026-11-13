@@ -9,8 +9,8 @@
   --sea: #5a8f9b;
   --line: rgba(232, 224, 212, 0.14);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --font-display: 'ZCOOL XiaoWei', 'Noto Serif TC', serif;
-  --font-body: 'Noto Serif TC', 'Songti TC', serif;
+  --font-display: 'Noto Serif TC', 'Songti TC', 'PingFang TC', serif;
+  --font-body: 'Noto Serif TC', 'Songti TC', 'PingFang TC', serif;
   color-scheme: dark;
 }
 
@@ -29,9 +29,12 @@ body,
 
 body {
   font-family: var(--font-body);
+  font-weight: 400;
+  font-synthesis: none;
   background: var(--bg-deep);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
@@ -58,7 +61,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -219,17 +222,19 @@ p {
 
 .brand-mark {
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: clamp(3.8rem, 18vw, 5.5rem);
   line-height: 1;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   color: var(--gold-soft);
   text-shadow: 0 0 40px rgba(232, 201, 160, 0.35);
   margin-bottom: 0.35rem;
 }
 
 .brand-tagline {
+  font-weight: 700;
   font-size: clamp(1.35rem, 5.5vw, 1.75rem);
-  letter-spacing: 0.28em;
+  letter-spacing: 0.2em;
   color: var(--ink);
   margin-bottom: 0.85rem;
 }
@@ -310,7 +315,7 @@ p {
 .rail-card strong {
   font-family: var(--font-display);
   font-size: 1.25rem;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 .rail-sub {
@@ -380,7 +385,7 @@ p {
   display: block;
   font-family: var(--font-display);
   font-size: 1.15rem;
-  font-weight: 400;
+  font-weight: 700;
   margin-bottom: 0.2rem;
 }
 
@@ -549,7 +554,7 @@ p {
 
 .watch-meta strong {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   font-size: 1.05rem;
 }
 
