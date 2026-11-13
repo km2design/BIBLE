@@ -40,9 +40,11 @@ export function createAudioEngine(): AudioEngine {
   let sfxVol = 0.45
   let bgmId: BgmId = 'dawn'
   let natureId: NatureId = 'none'
+  let activeBgmId: BgmId | null = null
 
-  let bgmNodes: AudioNode[] = []
-  let bgmOsc: OscillatorNode[] = []
+  const bgmElements = new Map<BgmId, HTMLAudioElement>()
+  const bgmConnected = new Set<BgmId>()
+
   let natureStops: Stoppable[] = []
   let natureTimers: number[] = []
 
@@ -68,16 +70,29 @@ export function createAudioEngine(): AudioEngine {
     if (ctx?.state === 'suspended') await ctx.resume()
   }
 
+  function getBgmElement(id: BgmId) {
+    ensure()
+    let el = bgmElements.get(id)
+    if (!el) {
+      const preset = bgmPresets.find((p) => p.id === id) ?? bgmPresets[0]
+      el = new Audio(preset.src)
+      el.loop = true
+      el.preload = 'metadata'
+      bgmElements.set(id, el)
+    }
+    if (ctx && bgmBus && !bgmConnected.has(id)) {
+      const src = ctx.createMediaElementSource(el)
+      src.connect(bgmBus)
+      bgmConnected.add(id)
+    }
+    return el
+  }
+
   function clearBgm() {
-    bgmOsc.forEach((o) => {
-      try {
-        o.stop()
-      } catch {
-        /* */
-      }
+    bgmElements.forEach((el) => {
+      el.pause()
     })
-    bgmOsc = []
-    bgmNodes = []
+    activeBgmId = null
   }
 
   function clearNature() {
@@ -108,33 +123,31 @@ export function createAudioEngine(): AudioEngine {
   function startBgm(id: BgmId) {
     ensure()
     if (!ctx || !bgmBus) return
-    clearBgm()
-    const preset = bgmPresets.find((p) => p.id === id) ?? bgmPresets[0]
-    preset.freqs.forEach((f, i) => {
-      const osc = ctx!.createOscillator()
-      const gain = ctx!.createGain()
-      const lfo = ctx!.createOscillator()
-      const lfoGain = ctx!.createGain()
-      osc.type = preset.type
-      osc.frequency.value = f
-      gain.gain.value = (0.11 - i * 0.015) * (preset.freqs.length <= 2 ? 1.35 : 1)
-      lfo.frequency.value = preset.lfo + i * 0.02
-      lfoGain.gain.value = 3 + i * 0.8
-      lfo.connect(lfoGain)
-      lfoGain.connect(osc.frequency)
-      osc.connect(gain)
-      gain.connect(bgmBus!)
-      osc.start()
-      lfo.start()
-      bgmOsc.push(osc, lfo)
-      bgmNodes.push(gain)
+    void ctx.resume()
+
+    if (activeBgmId && activeBgmId !== id) {
+      const prev = bgmElements.get(activeBgmId)
+      prev?.pause()
+    }
+
+    const el = getBgmElement(id)
+    if (activeBgmId !== id) {
+      try {
+        el.currentTime = 0
+      } catch {
+        /* ignore seek errors while loading */
+      }
+    }
+    activeBgmId = id
+    void el.play().catch(() => {
+      /* autoplay may fail until user gesture */
     })
   }
 
   function schedule(fn: () => void, ms: number) {
-    const id = window.setTimeout(fn, ms)
-    natureTimers.push(id)
-    return id
+    const timerId = window.setTimeout(fn, ms)
+    natureTimers.push(timerId)
+    return timerId
   }
 
   function startNoisePad(filterFreq: number, q: number, gainVal: number, lfoRate: number) {
@@ -325,7 +338,6 @@ export function createAudioEngine(): AudioEngine {
       return
     }
 
-    // devotion soft bell
     ;[523.25, 659.25, 783.99].forEach((f, i) => {
       const osc = ctx!.createOscillator()
       const gain = ctx!.createGain()
@@ -363,10 +375,12 @@ export function createAudioEngine(): AudioEngine {
       bgmId = id
       bgmEnabled = enabled
       bgmVol = Math.max(0, Math.min(1, volume))
-      if (changed && enabled && masterOn) startBgm(id)
-      if (!enabled) clearBgm()
+      if (!enabled || !masterOn) {
+        clearBgm()
+      } else if (changed || activeBgmId !== id) {
+        startBgm(id)
+      }
       applyBusGains()
-      if (enabled && masterOn && bgmOsc.length === 0) startBgm(id)
     },
     setNature(id, enabled, volume) {
       const changed = id !== natureId || enabled !== natureEnabled
@@ -388,6 +402,11 @@ export function createAudioEngine(): AudioEngine {
     dispose() {
       clearBgm()
       clearNature()
+      bgmElements.forEach((el) => {
+        el.src = ''
+      })
+      bgmElements.clear()
+      bgmConnected.clear()
       void ctx?.close()
       ctx = null
     },

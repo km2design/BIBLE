@@ -26,9 +26,7 @@ export type BgmPreset = {
   id: BgmId
   label: string
   desc: string
-  freqs: number[]
-  type: OscillatorType
-  lfo: number
+  src: string
 }
 
 export type NaturePreset = {
@@ -38,16 +36,16 @@ export type NaturePreset = {
 }
 
 export const bgmPresets: BgmPreset[] = [
-  { id: 'dawn', label: '晨曦', desc: '溫暖破曉襯底', freqs: [110, 164.81, 196, 246.94], type: 'sine', lfo: 0.08 },
-  { id: 'lake', label: '寧靜湖', desc: '柔和的大調和弦', freqs: [130.81, 164.81, 196, 261.63], type: 'sine', lfo: 0.06 },
-  { id: 'stars', label: '深夜星', desc: '稀疏低頻星光', freqs: [82.41, 123.47, 164.81], type: 'triangle', lfo: 0.04 },
-  { id: 'glow', label: '柔光', desc: '輕盈五度漂浮', freqs: [146.83, 220, 293.66], type: 'sine', lfo: 0.1 },
-  { id: 'hills', label: '遠山', desc: '緩慢長音襯景', freqs: [98, 147, 196, 233.08], type: 'triangle', lfo: 0.05 },
-  { id: 'hope', label: '盼望', desc: '微微上揚的氣息', freqs: [123.47, 185, 246.94, 369.99], type: 'sine', lfo: 0.09 },
-  { id: 'rest', label: '安息', desc: '極柔小調安息', freqs: [103.83, 155.56, 207.65], type: 'sine', lfo: 0.03 },
-  { id: 'grace', label: '恩典', desc: '溫暖七和弦', freqs: [130.81, 196, 246.94, 311.13], type: 'sine', lfo: 0.07 },
-  { id: 'pilgrim', label: '朝聖', desc: '緩步前行的節奏', freqs: [110, 146.83, 220, 329.63], type: 'triangle', lfo: 0.12 },
-  { id: 'void', label: '空境', desc: '極簡空靈餘韻', freqs: [87.31, 174.61], type: 'sine', lfo: 0.02 },
+  { id: 'dawn', label: '晨曦', desc: '溫暖破曉襯底', src: '/audio/bgm/dawn.mp3' },
+  { id: 'lake', label: '寧靜湖', desc: '柔和的大調和弦', src: '/audio/bgm/lake.mp3' },
+  { id: 'stars', label: '深夜星', desc: '稀疏低頻星光', src: '/audio/bgm/stars.mp3' },
+  { id: 'glow', label: '柔光', desc: '輕盈五度漂浮', src: '/audio/bgm/glow.mp3' },
+  { id: 'hills', label: '遠山', desc: '緩慢長音襯景', src: '/audio/bgm/hills.mp3' },
+  { id: 'hope', label: '盼望', desc: '微微上揚的氣息', src: '/audio/bgm/hope.mp3' },
+  { id: 'rest', label: '安息', desc: '極柔小調安息', src: '/audio/bgm/rest.mp3' },
+  { id: 'grace', label: '恩典', desc: '溫暖七和弦', src: '/audio/bgm/grace.mp3' },
+  { id: 'pilgrim', label: '朝聖', desc: '緩步前行的節奏', src: '/audio/bgm/pilgrim.mp3' },
+  { id: 'void', label: '空境', desc: '極簡空靈餘韻', src: '/audio/bgm/void.mp3' },
 ]
 
 export const naturePresets: NaturePreset[] = [

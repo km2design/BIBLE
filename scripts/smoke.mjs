@@ -42,6 +42,11 @@ await page.getByRole('button', { name: '海邊' }).click()
 ok('nature sea', await page.locator('.choice-chip.active', { hasText: '海邊' }).isVisible())
 await page.getByRole('button', { name: '寧靜湖' }).click()
 ok('bgm lake', await page.locator('.choice-chip.active', { hasText: '寧靜湖' }).isVisible())
+const bgmStatus = await page.evaluate(async () => {
+  const res = await fetch('/audio/bgm/lake.mp3', { method: 'HEAD' })
+  return { ok: res.ok, type: res.headers.get('content-type') || '' }
+})
+ok('bgm mp3 served', bgmStatus.ok, bgmStatus.type)
 await page.screenshot({ path: `${out}/settings_audio.png` })
 await page.getByRole('button', { name: '返回' }).click()
 await page.waitForURL('**/watch/**')
