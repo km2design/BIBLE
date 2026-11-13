@@ -1,0 +1,483 @@
+export type Gospel = 'matthew' | 'mark' | 'luke' | 'john'
+
+export type Scene = {
+  id: string
+  title: string
+  narration: string
+  verseRef: string
+  verse: string
+  palette: 'night' | 'dawn' | 'sea' | 'desert' | 'garden' | 'gold' | 'storm' | 'cross' | 'empty'
+  motif: 'star' | 'dove' | 'net' | 'mountain' | 'boat' | 'loaves' | 'path' | 'tomb' | 'cross' | 'light'
+}
+
+export type Episode = {
+  id: string
+  gospel: Gospel
+  gospelLabel: string
+  chapter: string
+  title: string
+  subtitle: string
+  durationLabel: string
+  devotion: {
+    title: string
+    body: string
+    prayer: string
+  }
+  scenes: Scene[]
+}
+
+export const gospelMeta: Record<
+  Gospel,
+  { label: string; focus: string; accent: string }
+> = {
+  matthew: { label: '馬太福音', focus: '君王與國度', accent: '#c4894a' },
+  mark: { label: '馬可福音', focus: '僕人與行動', accent: '#5a8f7b' },
+  luke: { label: '路加福音', focus: '人子與憐憫', accent: '#7a9bb8' },
+  john: { label: '約翰福音', focus: '道成肉身', accent: '#b8956a' },
+}
+
+export const episodes: Episode[] = [
+  {
+    id: 'birth',
+    gospel: 'luke',
+    gospelLabel: '路加福音',
+    chapter: '二章',
+    title: '伯利恆之夜',
+    subtitle: '道成了肉身，住在我們中間',
+    durationLabel: '約 4 分',
+    devotion: {
+      title: '神與我們同在',
+      body: '耶穌降生在馬槽，不是宮殿。神選擇走進最卑微的地方，好叫每一個尋求祂的人，都能靠近。今夜，願你把焦慮放下，讓「以馬內利」成為你的安息。',
+      prayer: '主啊，謝謝祢降生在我們中間。求祢今夜靠近我的心，讓我在卑微之處仍能看見祢的榮光。阿們。',
+    },
+    scenes: [
+      {
+        id: 'birth-1',
+        title: '報名上冊',
+        narration: '凱撒亞古士督有旨意下來，叫天下人民都報名上冊。約瑟帶著馬利亞，往伯利恆去。',
+        verseRef: '路加福音 2:1, 4-5',
+        verse: '當那些日子，凱撒亞古士督有旨意下來，叫天下人民都報名上冊……約瑟也從加利利的拿撒勒城上猶太去，到了大衛的城，名叫伯利恆……要和他所聘之妻馬利亞一同報名上冊。那時馬利亞的身孕已經重了。',
+        palette: 'night',
+        motif: 'path',
+      },
+      {
+        id: 'birth-2',
+        title: '馬槽裡的嬰孩',
+        narration: '客店裡沒有地方。嬰孩用布包起來，放在馬槽裡。',
+        verseRef: '路加福音 2:7',
+        verse: '就生了頭胎的兒子，用布包起來，放在馬槽裡，因為客店裡沒有地方。',
+        palette: 'dawn',
+        motif: 'star',
+      },
+      {
+        id: 'birth-3',
+        title: '天使報喜',
+        narration: '野地裡的牧羊人聽見：今日為你們生了救主。',
+        verseRef: '路加福音 2:10-11',
+        verse: '那天使對他們說：「不要懼怕！我報給你們大喜的信息，是關乎萬民的；因今天在大衛的城裡，為你們生了救主，就是主基督。」',
+        palette: 'gold',
+        motif: 'light',
+      },
+    ],
+  },
+  {
+    id: 'baptism',
+    gospel: 'matthew',
+    gospelLabel: '馬太福音',
+    chapter: '三章',
+    title: '約旦河受洗',
+    subtitle: '天忽然為祂開了',
+    durationLabel: '約 3 分',
+    devotion: {
+      title: '被愛的身分',
+      body: '耶穌受洗時，天父親口說：「這是我的愛子。」在你開始任何服事、任何一天之前，先聽這句話——你被愛，不是因為表現，而是因為你屬於祂。',
+      prayer: '天父，求祢再次告訴我：我是被祢所愛的。讓我從這身分出發，而不是從恐懼出發。阿們。',
+    },
+    scenes: [
+      {
+        id: 'baptism-1',
+        title: '曠野的聲音',
+        narration: '施洗約翰在曠野傳道：天國近了，你們應當悔改。',
+        verseRef: '馬太福音 3:1-2',
+        verse: '那時，有施洗的約翰出來，在猶太的曠野傳道，說：「天國近了，你們應當悔改！」',
+        palette: 'desert',
+        motif: 'path',
+      },
+      {
+        id: 'baptism-2',
+        title: '耶穌受洗',
+        narration: '耶穌從加利利來到約旦河，見了約翰，要受他的洗。',
+        verseRef: '馬太福音 3:13, 16-17',
+        verse: '當下，耶穌從加利利來到約旦河，見了約翰，要受他的洗……耶穌受了洗，隨即從水裡上來。天忽然為他開了，他就看見神的靈彷彿鴿子降下，落在他身上。從天上有聲音說：「這是我的愛子，我所喜悅的。」',
+        palette: 'dawn',
+        motif: 'dove',
+      },
+    ],
+  },
+  {
+    id: 'calling',
+    gospel: 'mark',
+    gospelLabel: '馬可福音',
+    chapter: '一章',
+    title: '海邊呼召',
+    subtitle: '來跟從我，我要叫你們得人如得魚',
+    durationLabel: '約 3 分',
+    devotion: {
+      title: '立刻跟從',
+      body: '彼得和安得烈聽見呼召，立刻捨了網。跟從耶穌不總是先「準備好」，而是願意把網放下。今天，有什麼網正纏住你的腳步？',
+      prayer: '主耶穌，幫助我聽見祢的呼召，並有勇氣放下手中的網，單單跟從祢。阿們。',
+    },
+    scenes: [
+      {
+        id: 'calling-1',
+        title: '加利利海邊',
+        narration: '耶穌在加利利海邊行走，看見西門和安得烈在海裡撒網。',
+        verseRef: '馬可福音 1:16-17',
+        verse: '耶穌順著加利利的海邊走，看見西門和西門的兄弟安得烈在海裡撒網；他們本是打魚的。耶穌對他們說：「來跟從我，我要叫你們得人如得魚一樣。」',
+        palette: 'sea',
+        motif: 'net',
+      },
+      {
+        id: 'calling-2',
+        title: '捨了網',
+        narration: '他們就立刻捨了網，跟從了耶穌。',
+        verseRef: '馬可福音 1:18, 20',
+        verse: '他們就立刻捨了網，跟從了耶穌……耶穌隨即招呼他們，他們就把父親西庇太和雇工人留在船上，跟從耶穌去了。',
+        palette: 'dawn',
+        motif: 'path',
+      },
+    ],
+  },
+  {
+    id: 'sermon',
+    gospel: 'matthew',
+    gospelLabel: '馬太福音',
+    chapter: '五章',
+    title: '登山寶訓',
+    subtitle: '虛心的人有福了',
+    durationLabel: '約 4 分',
+    devotion: {
+      title: '另一種福氣',
+      body: '世界說強者有福，耶穌卻說虛心、哀慟、溫柔的人有福。祂把福氣的定義翻轉了——不是擁有更多，而是心被天國充滿。',
+      prayer: '主啊，教導我以祢的眼光看福氣。讓我虛心倚靠祢，而不是倚靠自己的力量。阿們。',
+    },
+    scenes: [
+      {
+        id: 'sermon-1',
+        title: '上了山',
+        narration: '耶穌看見這許多的人，就上了山，既已坐下，門徒到祂跟前來。',
+        verseRef: '馬太福音 5:1-2',
+        verse: '耶穌看見這許多的人，就上了山，既已坐下，門徒到他跟前來，他就開口教訓他們，說：',
+        palette: 'garden',
+        motif: 'mountain',
+      },
+      {
+        id: 'sermon-2',
+        title: '八福',
+        narration: '虛心的人有福了，因為天國是他們的。',
+        verseRef: '馬太福音 5:3-6',
+        verse: '虛心的人有福了！因為天國是他們的。哀慟的人有福了！因為他們必得安慰。溫柔的人有福了！因為他們必承受地土。飢渴慕義的人有福了！因為他們必得飽足。',
+        palette: 'gold',
+        motif: 'light',
+      },
+      {
+        id: 'sermon-3',
+        title: '世上的光',
+        narration: '你們是世上的光。人點燈，不放在斗底下，是放在燈臺上。',
+        verseRef: '馬太福音 5:14-16',
+        verse: '你們是世上的光。城造在山上是不能隱藏的。人點燈，不放在斗底下，是放在燈臺上，就照亮一家的人。你們的光也當這樣照在人前，叫他們看見你們的好行為，便將榮耀歸給你們在天上的父。',
+        palette: 'dawn',
+        motif: 'light',
+      },
+    ],
+  },
+  {
+    id: 'storm',
+    gospel: 'mark',
+    gospelLabel: '馬可福音',
+    chapter: '四章',
+    title: '平靜風浪',
+    subtitle: '連風和海也聽從祂了',
+    durationLabel: '約 3 分',
+    devotion: {
+      title: '船上的平安',
+      body: '風浪很大，耶穌卻在船尾睡覺。門徒喊「我們喪命了」，祂卻問「你們的信心在哪裡？」有時平安不是風停了，而是知道主與你同船。',
+      prayer: '主耶穌，當風浪來時，求祢提醒我：祢就在船上。賜我信心，勝過恐懼。阿們。',
+    },
+    scenes: [
+      {
+        id: 'storm-1',
+        title: '忽然起了暴風',
+        narration: '海裡起了暴風，波浪打入船內，甚至船要滿了水。',
+        verseRef: '馬可福音 4:37-38',
+        verse: '忽然起了暴風，波浪打入船內，甚至船要滿了水。耶穌在船尾上，枕著枕頭睡覺。門徒叫醒了他，說：「夫子！我們喪命，你不顧嗎？」',
+        palette: 'storm',
+        motif: 'boat',
+      },
+      {
+        id: 'storm-2',
+        title: '住了吧！靜了吧！',
+        narration: '耶穌醒了，斥責風，又向海說：住了吧！靜了吧！風就止住，大大的平靜了。',
+        verseRef: '馬可福音 4:39-41',
+        verse: '耶穌醒了，斥責風，又向海說：「住了吧！靜了吧！」風就止住，大大的平靜了。耶穌對他們說：「為什麼膽怯？你們還沒有信心嗎？」他們就大大的懼怕，彼此說：「這到底是誰，連風和海也聽從他了。」',
+        palette: 'sea',
+        motif: 'boat',
+      },
+    ],
+  },
+  {
+    id: 'loaves',
+    gospel: 'john',
+    gospelLabel: '約翰福音',
+    chapter: '六章',
+    title: '五餅二魚',
+    subtitle: '生命的糧從天上來',
+    durationLabel: '約 3 分',
+    devotion: {
+      title: '小小的奉獻',
+      body: '一個孩童的五餅二魚，在耶穌手中餵飽五千人。你覺得「不夠」的那一點點，交給祂，往往成為別人的飽足。',
+      prayer: '主啊，我把僅有的獻上。求祢祝福、擘開、分給需要的人，也讓我在其中被滿足。阿們。',
+    },
+    scenes: [
+      {
+        id: 'loaves-1',
+        title: '許多人來',
+        narration: '有一個孩童，帶著五個大麥餅、兩條魚。耶穌拿起餅來祝謝，分給坐著的人。',
+        verseRef: '約翰福音 6:9-11',
+        verse: '在這裡有一個孩童，帶著五個大麥餅、兩條魚，只是分給這許多人還算什麼呢？」耶穌說：「你們叫眾人坐下。」……耶穌拿起餅來，祝謝了，就分給那坐著的人；分魚也是這樣，都隨著他們所要的。',
+        palette: 'garden',
+        motif: 'loaves',
+      },
+      {
+        id: 'loaves-2',
+        title: '生命的糧',
+        narration: '耶穌說：我就是生命的糧。到我這裡來的，必定不餓。',
+        verseRef: '約翰福音 6:35',
+        verse: '耶穌說：「我就是生命的糧。到我這裡來的，必定不餓；信我的，永遠不渴。」',
+        palette: 'gold',
+        motif: 'light',
+      },
+    ],
+  },
+  {
+    id: 'prodigal',
+    gospel: 'luke',
+    gospelLabel: '路加福音',
+    chapter: '十五章',
+    title: '浪子回家',
+    subtitle: '父親遠遠的看見，就動了慈心',
+    durationLabel: '約 4 分',
+    devotion: {
+      title: '奔跑的父親',
+      body: '浪子還在遠處，父親就跑過去抱著他親嘴。神的愛不是等你「配得」才給，而是在你轉身的那一刻，已經向你奔來。',
+      prayer: '天父，謝謝祢總是等待我回家。無論我走得多遠，求祢幫我轉身，奔向祢的懷抱。阿們。',
+    },
+    scenes: [
+      {
+        id: 'prodigal-1',
+        title: '遠方',
+        narration: '小兒子收拾一切，往遠方去了，在那裡任意放蕩，浪費資財。',
+        verseRef: '路加福音 15:13-14',
+        verse: '過了不多幾日，小兒子就把他一切所有的都收拾起來，往遠方去了。在那裡任意放蕩，浪費資財。既耗盡了一切所有的，又遇著那地方大遭饑荒，就窮苦起來。',
+        palette: 'desert',
+        motif: 'path',
+      },
+      {
+        id: 'prodigal-2',
+        title: '醒悟過來',
+        narration: '他醒悟過來，說：我要起來，到我父親那裡去。',
+        verseRef: '路加福音 15:17-18',
+        verse: '他醒悟過來，就說：「我父親有多少的雇工，口糧有餘，我倒在這裡餓死嗎？我要起來，到我父親那裡去，向他說：父親！我得罪了天，又得罪了你。」',
+        palette: 'dawn',
+        motif: 'path',
+      },
+      {
+        id: 'prodigal-3',
+        title: '擁抱',
+        narration: '相離還遠，他父親看見，就動了慈心，跑去抱著他的頸項，連連與他親嘴。',
+        verseRef: '路加福音 15:20',
+        verse: '於是起來，往他父親那裡去。相離還遠，他父親看見，就動了慈心，跑去抱著他的頸項，連連與他親嘴。',
+        palette: 'gold',
+        motif: 'light',
+      },
+    ],
+  },
+  {
+    id: 'lazarus',
+    gospel: 'john',
+    gospelLabel: '約翰福音',
+    chapter: '十一章',
+    title: '拉撒路復活',
+    subtitle: '我就是復活，我就是生命',
+    durationLabel: '約 3 分',
+    devotion: {
+      title: '即使遲了',
+      body: '馬大說「你若早在這裡」。耶穌卻說「我就是復活」。有時我們以為太晚了，但祂的時間，總能把死亡變成見證。',
+      prayer: '主耶穌，在我覺得「太遲」的地方，求祢顯明祢仍是復活與生命。阿們。',
+    },
+    scenes: [
+      {
+        id: 'lazarus-1',
+        title: '哭了',
+        narration: '耶穌看見她哭，並看見與她同來的猶太人也哭，就心裡悲歎，又甚憂愁。耶穌哭了。',
+        verseRef: '約翰福音 11:33-35',
+        verse: '耶穌看見她哭，並看見與她同來的猶太人也哭，就心裡悲歎，又甚憂愁，便說：「你們把牠安放在哪裡？」他們回答說：「請主來看。」耶穌哭了。',
+        palette: 'night',
+        motif: 'tomb',
+      },
+      {
+        id: 'lazarus-2',
+        title: '出來！',
+        narration: '耶穌大聲呼叫說：拉撒路出來！那死人就出來了。',
+        verseRef: '約翰福音 11:25, 43-44',
+        verse: '耶穌對他說：「復活在我，生命也在我。信我的人雖然死了，也必復活。」……說了這話，就大聲呼叫說：「拉撒路出來！」那死人就出來了，手腳裹著布，臉上包著手巾。',
+        palette: 'dawn',
+        motif: 'light',
+      },
+    ],
+  },
+  {
+    id: 'entry',
+    gospel: 'matthew',
+    gospelLabel: '馬太福音',
+    chapter: '二十一章',
+    title: '騎驢進京',
+    subtitle: '和散那歸於大衛的子孫',
+    durationLabel: '約 3 分',
+    devotion: {
+      title: '柔和的王',
+      body: '君王騎著驢駒進城，不是戰馬。祂的國不以武力建立，而以謙卑與捨己。今天，願我們也以柔和迎接這位王。',
+      prayer: '君王耶穌，我歡迎祢進入我的生命。教導我以謙卑跟隨祢，而不是追逐世上的榮耀。阿們。',
+    },
+    scenes: [
+      {
+        id: 'entry-1',
+        title: '和散那',
+        narration: '前行後隨的眾人喊著說：和散那歸於大衛的子孫！',
+        verseRef: '馬太福音 21:8-9',
+        verse: '眾人多半把衣服鋪在路上；還有人砍下樹枝來鋪在路上。前行後隨的眾人喊著說：「和散那歸於大衛的子孫！奉主名來的是應當稱頌的！高高在上和散那！」',
+        palette: 'gold',
+        motif: 'path',
+      },
+    ],
+  },
+  {
+    id: 'supper',
+    gospel: 'luke',
+    gospelLabel: '路加福音',
+    chapter: '二十二章',
+    title: '最後的晚餐',
+    subtitle: '這是我的身體，為你們捨的',
+    durationLabel: '約 4 分',
+    devotion: {
+      title: '擘開的愛',
+      body: '餅被擘開，杯被舉起——耶穌以自己的身體與血，立下新約。每一次記念，都是再一次被愛喚醒：祂為你捨命。',
+      prayer: '主啊，謝謝祢為我擘開自己。求祢潔淨我的心，使我配得記念祢的死與復活。阿們。',
+    },
+    scenes: [
+      {
+        id: 'supper-1',
+        title: '樓上的房間',
+        narration: '時候到了，耶穌坐席，使徒也和他同坐。',
+        verseRef: '路加福音 22:14-16',
+        verse: '時候到了，耶穌坐席，使徒也和他同坐。耶穌對他們說：「我很願意在受害以先和你們吃這逾越節的筵席。我告訴你們，我不再吃這筵席，直到成就在神的國裡。」',
+        palette: 'night',
+        motif: 'loaves',
+      },
+      {
+        id: 'supper-2',
+        title: '新約',
+        narration: '這杯是用我血所立的新約，是為你們流出來的。',
+        verseRef: '路加福音 22:19-20',
+        verse: '又拿起餅來，祝謝了，就擘開，遞給他們，說：「這是我的身體，為你們捨的，你們也應當如此行，為的是記念我。」飯後也照樣拿起杯來，說：「這杯是用我血所立的新約，是為你們流出來的。」',
+        palette: 'gold',
+        motif: 'light',
+      },
+    ],
+  },
+  {
+    id: 'cross',
+    gospel: 'john',
+    gospelLabel: '約翰福音',
+    chapter: '十九章',
+    title: '十字架',
+    subtitle: '成了',
+    durationLabel: '約 4 分',
+    devotion: {
+      title: '成了',
+      body: '「成了」不是失敗的結束，而是救贖的完成。耶穌擔當了我們的罪，好叫我們得以自由。站在十字架前，讓感謝取代自責。',
+      prayer: '主耶穌，謝謝祢在十字架上完成了救恩。求祢把這愛刻在我心裡，使我一生為祢而活。阿們。',
+    },
+    scenes: [
+      {
+        id: 'cross-1',
+        title: '看哪，這個人',
+        narration: '他們就帶著耶穌到了各各他，把他釘在十字架上。',
+        verseRef: '約翰福音 19:17-18',
+        verse: '他們就把耶穌帶了去。耶穌背著自己的十字架出來，到了一個地方，名叫髑髏地，希伯來話叫各各他。他們就在那裡釘他在十字架上，還有兩個人和他一同釘著，一邊一個，耶穌在中間。',
+        palette: 'cross',
+        motif: 'cross',
+      },
+      {
+        id: 'cross-2',
+        title: '成了',
+        narration: '耶穌嘗了那醋，就說：成了！便低下頭，將靈魂交付神了。',
+        verseRef: '約翰福音 19:30',
+        verse: '耶穌嘗了那醋，就說：「成了！」便低下頭，將靈魂交付神了。',
+        palette: 'night',
+        motif: 'cross',
+      },
+    ],
+  },
+  {
+    id: 'resurrection',
+    gospel: 'matthew',
+    gospelLabel: '馬太福音',
+    chapter: '二十八章',
+    title: '空墳與使命',
+    subtitle: '祂不在這裡，照祂所說的，已經復活了',
+    durationLabel: '約 4 分',
+    devotion: {
+      title: '不要怕',
+      body: '天亮的時候，天使說「不要怕」。復活的清晨，恐懼被喜樂取代。因為墳墓空了，你的盼望可以重新站起來。',
+      prayer: '復活的主，謝謝祢勝過死亡。求祢趕走我的懼怕，差遣我去傳揚這大喜的信息。阿們。',
+    },
+    scenes: [
+      {
+        id: 'resurrection-1',
+        title: '天快亮的時候',
+        narration: '安息日將盡，天快亮的時候，抹大拉的馬利亞和那個馬利亞來看墳墓。',
+        verseRef: '馬太福音 28:1-2',
+        verse: '安息日將盡，七日的頭一日，天快亮的時候，抹大拉的馬利亞和那個馬利亞來看墳墓。忽然，地大震動；因為有主的使者從天上下來，把石頭輥開，坐在上面。',
+        palette: 'empty',
+        motif: 'tomb',
+      },
+      {
+        id: 'resurrection-2',
+        title: '已經復活了',
+        narration: '祂不在這裡，照祂所說的，已經復活了。',
+        verseRef: '馬太福音 28:5-7',
+        verse: '天使對婦女說：「不要害怕！我知道你們是尋找那釘十字架的耶穌。他不在這裡，照他所說的，已經復活了。你們來看安放主的地方。快去告訴他的門徒，說他從死裡復活了，並且在你們以先往加利利去，在那裡你們要見他。」',
+        palette: 'dawn',
+        motif: 'light',
+      },
+      {
+        id: 'resurrection-3',
+        title: '大使命',
+        narration: '所以，你們要去，使萬民作我的門徒。',
+        verseRef: '馬太福音 28:19-20',
+        verse: '所以，你們要去，使萬民作我的門徒，奉父、子、聖靈的名給他們施洗。凡我所吩咐你們的，都教訓他們遵守，我就常與你們同在，直到世界的末了。',
+        palette: 'gold',
+        motif: 'light',
+      },
+    ],
+  },
+]
+
+export function getEpisode(id: string): Episode | undefined {
+  return episodes.find((e) => e.id === id)
+}
+
+export function episodesByGospel(gospel: Gospel): Episode[] {
+  return episodes.filter((e) => e.gospel === gospel)
+}
