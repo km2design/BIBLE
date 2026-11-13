@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 
 export function BottomNav() {
   const { pathname } = useLocation()
-  if (pathname.startsWith('/watch')) return null
+  if (pathname.startsWith('/watch') || pathname.startsWith('/settings')) return null
 
   return (
     <nav className="bottom-nav" aria-label="主要導覽">

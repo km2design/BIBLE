@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { AudioControls } from '../components/AudioControls'
 import { SceneArt } from '../components/SceneArt'
+import { useAudioSettings } from '../context/AudioSettings'
 import { getEpisode } from '../data/episodes'
-import { useAmbientMusic } from '../hooks/useAmbientMusic'
 
 export function Watch() {
   const { id } = useParams()
   const episode = id ? getEpisode(id) : undefined
+  const audio = useAudioSettings()
   const [index, setIndex] = useState(0)
-  const [musicOn, setMusicOn] = useState(true)
   const [showDevotion, setShowDevotion] = useState(false)
   const [panel, setPanel] = useState<'story' | 'verse'>('story')
-
-  useAmbientMusic(musicOn && !!episode)
 
   useEffect(() => {
     setIndex(0)
@@ -27,19 +26,25 @@ export function Watch() {
   const isFirst = index <= 0
 
   function next() {
+    audio.unlock()
     if (isLast) {
+      audio.playSfx('devotion')
       setShowDevotion(true)
       return
     }
+    audio.playSfx('scene')
     setIndex((i) => i + 1)
     setPanel('story')
   }
 
   function prev() {
+    audio.unlock()
     if (showDevotion) {
+      audio.playSfx('tap')
       setShowDevotion(false)
       return
     }
+    audio.playSfx('tap')
     setIndex((i) => Math.max(0, i - 1))
     setPanel('story')
   }
@@ -67,17 +72,7 @@ export function Watch() {
             </span>
             <strong>{episode.title}</strong>
           </div>
-          <button
-            type="button"
-            className={`icon-btn music ${musicOn ? 'on' : ''}`}
-            onClick={() => setMusicOn((v) => !v)}
-            aria-label={musicOn ? '關閉背景音樂' : '開啟背景音樂'}
-            aria-pressed={musicOn}
-            title={musicOn ? '音樂開啟' : '音樂關閉'}
-          >
-            <span aria-hidden>{musicOn ? '♪' : '✕'}</span>
-            <small>{musicOn ? '開' : '關'}</small>
-          </button>
+          <AudioControls />
         </header>
 
         {!showDevotion ? (
@@ -89,10 +84,28 @@ export function Watch() {
             </div>
 
             <div className="panel-toggle" role="tablist">
-              <button type="button" role="tab" aria-selected={panel === 'story'} className={panel === 'story' ? 'active' : ''} onClick={() => setPanel('story')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panel === 'story'}
+                className={panel === 'story' ? 'active' : ''}
+                onClick={() => {
+                  setPanel('story')
+                  audio.playSfx('tap')
+                }}
+              >
                 故事
               </button>
-              <button type="button" role="tab" aria-selected={panel === 'verse'} className={panel === 'verse' ? 'active' : ''} onClick={() => setPanel('verse')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panel === 'verse'}
+                className={panel === 'verse' ? 'active' : ''}
+                onClick={() => {
+                  setPanel('verse')
+                  audio.playSfx('tap')
+                }}
+              >
                 經文
               </button>
             </div>
