@@ -13,7 +13,12 @@ export default function LibraryPage() {
           ← 光道
         </Link>
         <h1>繪卷目錄</h1>
-        <p>按四福音瀏覽耶穌生平場景。點進去，邊看邊讀。</p>
+        <p>
+          目前主推<strong>馬太福音</strong>完整主線；其他福音稍後擴充。也可直接進入
+          <Link href="/matthew" className="text-link" style={{ marginLeft: '0.35rem' }}>
+            馬太專頁 →
+          </Link>
+        </p>
       </header>
 
       {order.map((g) => {

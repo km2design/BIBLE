@@ -1244,6 +1244,24 @@ button.back-link {
   border-bottom: none !important;
 }
 
+.matthew-track {
+  list-style: none;
+}
+
+.mt-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: rgba(212, 165, 116, 0.18);
+  color: var(--gold);
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
 @media (min-width: 481px) {
   body {
     background:

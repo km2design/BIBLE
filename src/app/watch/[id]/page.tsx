@@ -7,6 +7,7 @@ import { AudioControls } from '../../../components/AudioControls'
 import { SceneArt } from '../../../components/SceneArt'
 import { useAudioSettings } from '../../../context/AudioSettings'
 import { getEpisode } from '../../../data/episodes'
+import { nextMatthewEpisode } from '../../../data/matthew'
 
 export default function WatchPage() {
   const params = useParams<{ id: string }>()
@@ -159,9 +160,21 @@ export default function WatchPage() {
               <button type="button" className="btn ghost" onClick={prev}>
                 回到最後一幕
               </button>
-              <Link className="btn primary" href="/library">
-                下一卷繪卷
-              </Link>
+              {(() => {
+                const nextEp = nextMatthewEpisode(episode.id)
+                if (nextEp) {
+                  return (
+                    <Link className="btn primary" href={`/watch/${nextEp.id}`}>
+                      下一卷 · {nextEp.title}
+                    </Link>
+                  )
+                }
+                return (
+                  <Link className="btn primary" href="/matthew">
+                    回到馬太目錄
+                  </Link>
+                )
+              })()}
             </div>
           </div>
         )}
