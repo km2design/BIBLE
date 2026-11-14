@@ -9,6 +9,9 @@ import { sql } from './db'
 
 const KINDS: WisdomKind[] = ['反思', '名言', '提醒', '警告', '勸戒', '鼓勵', '安慰', '同理']
 
+/** Current xAI chat model (grok-2-latest retired 2026-10-14). */
+const GROK_MODEL = 'grok-4.7'
+
 type GrokJson = {
   title?: string
   story?: string
@@ -65,17 +68,30 @@ async function writeCache(date: string, story: DailyStory, source: string): Prom
   }
 }
 
-/** Claim the right to generate today's story. Only one caller wins. */
+/**
+ * Claim the right to generate today's story.
+ * Wins on empty day, or when upgrading a prior sample / stale pending lock.
+ */
 async function claimGenerationSlot(date: string): Promise<boolean> {
   try {
-    // Clear stale pending locks so a crashed generation cannot block the day.
     await sql(
       `delete from daily_stories
        where story_date = $1::date
          and source = 'pending'
-         and created_at < now() - interval '45 seconds'`,
+         and created_at < now() - interval '90 seconds'`,
       [date],
     )
+
+    // Upgrade a sample row so a failed/early sample cache can become Grok later.
+    const upgraded = await sql<{ story_date: string }>(
+      `update daily_stories
+       set payload = '{}'::jsonb, source = 'pending', created_at = now()
+       where story_date = $1::date and source = 'sample'
+       returning story_date::text`,
+      [date],
+    )
+    if (upgraded.length > 0) return true
+
     const rows = await sql<{ story_date: string }>(
       `insert into daily_stories (story_date, payload, source)
        values ($1::date, '{}'::jsonb, 'pending')
@@ -111,7 +127,7 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'grok-2-latest',
+      model: GROK_MODEL,
       temperature: 0.8,
       messages: [
         {
@@ -132,7 +148,9 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
     choices?: { message?: { content?: string } }[]
   }
   const raw = data.choices?.[0]?.message?.content ?? ''
-  const jsonText = raw.replace(/^```json\s*|\s*```$/g, '').trim()
+  const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
+  const matched = fenced.match(/\{[\s\S]*\}/)
+  const jsonText = matched ? matched[0] : fenced
   const parsed = JSON.parse(jsonText) as GrokJson
   const kind = (KINDS.includes(parsed.wisdomKind as WisdomKind)
     ? parsed.wisdomKind
@@ -165,11 +183,9 @@ function isIsoDate(value: string): boolean {
 }
 
 /**
- * Public-safe daily story loader:
- * - Serves cache when present
- * - Never calls paid Grok for non-today dates
- * - Calls Grok at most once per date (DB claim slot)
- * - Falls back to sample content otherwise
+ * Public-safe daily story loader (no paid generation):
+ * - Serves finished cache (grok or sample)
+ * - Otherwise returns ephemeral sample without locking the day
  */
 export async function getDailyStory(date: string): Promise<{ story: DailyStory; source: string }> {
   const today = dateKey()
@@ -178,48 +194,20 @@ export async function getDailyStory(date: string): Promise<{ story: DailyStory; 
   const cached = await readCache(safeDate)
   if (cached && cached.source !== 'pending') return cached
 
-  // Past/future dates: sample only, no paid generation
-  if (safeDate !== today) {
-    return { story: getSampleStoryForDate(safeDate), source: 'sample' }
-  }
-
-  const apiKey = process.env.XAI_API_KEY?.trim()
-  if (!apiKey) {
-    const sample = getSampleStoryForDate(safeDate)
-    await writeCache(safeDate, sample, 'sample')
-    return { story: sample, source: 'sample' }
-  }
-
-  // Only one request may generate; others wait briefly then read cache/sample
-  const claimed = cached?.source === 'pending' ? false : await claimGenerationSlot(safeDate)
-  if (!claimed) {
+  if (cached?.source === 'pending') {
     for (let i = 0; i < 8; i++) {
       await new Promise((r) => setTimeout(r, 250))
       const again = await readCache(safeDate)
       if (again && again.source !== 'pending') return again
     }
-    return { story: getSampleStoryForDate(safeDate), source: 'sample' }
   }
 
-  try {
-    const generated = await callGrok(safeDate, apiKey)
-    if (!generated) {
-      const sample = getSampleStoryForDate(safeDate)
-      await finalizeCache(safeDate, sample, 'sample')
-      return { story: sample, source: 'sample' }
-    }
-    await finalizeCache(safeDate, generated, 'grok')
-    return { story: generated, source: 'grok' }
-  } catch {
-    const sample = getSampleStoryForDate(safeDate)
-    await finalizeCache(safeDate, sample, 'sample')
-    return { story: sample, source: 'sample' }
-  }
+  return { story: getSampleStoryForDate(safeDate), source: 'sample' }
 }
 
 /**
- * Cron entry: ensure today's story exists in cache.
- * Safe to call repeatedly — uses the same once-per-day claim lock.
+ * Cron-only: generate or upgrade today's story with Grok (once per day).
+ * Safe to call repeatedly — uses the claim lock; can upgrade sample → grok.
  */
 export async function ensureTodayStory(): Promise<{
   date: string
@@ -229,12 +217,59 @@ export async function ensureTodayStory(): Promise<{
 }> {
   const date = dateKey()
   const before = await readCache(date)
-  const alreadyReady = Boolean(before && before.source !== 'pending')
-  const { story, source } = await getDailyStory(date)
-  return {
-    date,
-    source,
-    created: !alreadyReady,
-    title: story.title,
+  if (before && before.source === 'grok') {
+    return { date, source: 'grok', created: false, title: before.story.title }
+  }
+
+  const apiKey = process.env.XAI_API_KEY?.trim()
+  if (!apiKey) {
+    const sample = getSampleStoryForDate(date)
+    if (!before || before.source === 'pending') {
+      if (before?.source === 'pending') await finalizeCache(date, sample, 'sample')
+      else await writeCache(date, sample, 'sample')
+    }
+    return { date, source: 'sample', created: !before || before.source === 'pending', title: sample.title }
+  }
+
+  const claimed = await claimGenerationSlot(date)
+  if (!claimed) {
+    const existing = await readCache(date)
+    if (existing && existing.source !== 'pending') {
+      return {
+        date,
+        source: existing.source,
+        created: false,
+        title: existing.story.title,
+      }
+    }
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 500))
+      const again = await readCache(date)
+      if (again && again.source !== 'pending') {
+        return {
+          date,
+          source: again.source,
+          created: again.source === 'grok',
+          title: again.story.title,
+        }
+      }
+    }
+    const sample = getSampleStoryForDate(date)
+    return { date, source: 'sample', created: false, title: sample.title }
+  }
+
+  try {
+    const generated = await callGrok(date, apiKey)
+    if (!generated) {
+      const sample = getSampleStoryForDate(date)
+      await finalizeCache(date, sample, 'sample')
+      return { date, source: 'sample', created: true, title: sample.title }
+    }
+    await finalizeCache(date, generated, 'grok')
+    return { date, source: 'grok', created: true, title: generated.title }
+  } catch {
+    const sample = getSampleStoryForDate(date)
+    await finalizeCache(date, sample, 'sample')
+    return { date, source: 'sample', created: true, title: sample.title }
   }
 }

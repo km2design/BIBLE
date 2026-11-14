@@ -67,7 +67,9 @@ export function DailyClient() {
         <h1>{story.title}</h1>
         <p className="daily-story">{story.story}</p>
         {source === 'sample' ? (
-          <p className="sample-note">目前為示範故事。綁定 Grok／xAI 金鑰後，可由 Grok 生成當日內容。</p>
+          <p className="sample-note">
+            目前為示範故事。綁定 Grok／xAI 金鑰後，可由排程（約香港時間每日 00:10）生成當日內容；也可手動觸發 cron。
+          </p>
         ) : (
           <p className="sample-note">本篇由 Grok 生成，再經光道呈現。</p>
         )}
