@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { characters } from '../data/characters'
 import { matthewEpisodes } from '../data/matthew'
+import { DollAvatar } from '../components/DollAvatar'
 
 export default function HomePage() {
   const first = matthewEpisodes[0]
@@ -16,24 +18,42 @@ export default function HomePage() {
         </div>
         <header className="hero-brand">
           <p className="brand-mark">光道</p>
-          <h1 className="brand-tagline">馬太福音繪卷</h1>
-          <p className="brand-lead">先看馬太：君王與國度。一路看繪卷，一路讀經文，再走進當日靈修與智慧故事。</p>
+          <h1 className="brand-tagline">每日公仔智慧</h1>
+          <p className="brand-lead">
+            3D 公仔角色讀經文，得著反思、名言、提醒、警告、勸戒、鼓勵、安慰與同理；附當日靈修，底下還可留言。
+          </p>
           <div className="hero-cta">
-            <Link className="btn primary" href={`/watch/${first.id}`}>
-              開始馬太福音
+            <Link className="btn primary" href="/daily">
+              打開今日故事
             </Link>
-            <Link className="btn ghost" href="/matthew">
-              看全部目錄
+            <Link className="btn ghost" href={`/watch/${first.id}`}>
+              看馬太福音
             </Link>
           </div>
         </header>
       </section>
 
       <section className="home-strip">
-        <h2>馬太主線</h2>
-        <p className="section-lead">從博士來朝到空墳大使命，{matthewEpisodes.length} 卷串起耶穌在馬太福音中的關鍵場景。</p>
+        <h2>今日這樣看</h2>
+        <p className="section-lead">公仔讀經 → 人生智慧一句 → 當日靈修反思 → 留言彼此鼓勵（有留言規則）。</p>
+        <div className="doll-row">
+          {characters.slice(0, 4).map((c) => (
+            <Link key={c.id} href="/daily" className="doll-chip">
+              <DollAvatar character={c} size="sm" />
+              <span>{c.name}</span>
+            </Link>
+          ))}
+        </div>
+        <Link className="btn soft" href="/daily" style={{ marginTop: '1.1rem' }}>
+          進入每日繪卷
+        </Link>
+      </section>
+
+      <section className="home-strip">
+        <h2>馬太福音主線</h2>
+        <p className="section-lead">另有 {matthewEpisodes.length} 卷馬太繪卷，從博士來朝到大使命，可連續觀看。</p>
         <ul className="episode-rail">
-          {matthewEpisodes.slice(0, 6).map((ep, i) => (
+          {matthewEpisodes.slice(0, 4).map((ep, i) => (
             <li key={ep.id} style={{ animationDelay: `${0.05 * i}s` }}>
               <Link href={`/watch/${ep.id}`} className="rail-card">
                 <span className="rail-gospel">
@@ -47,22 +67,6 @@ export default function HomePage() {
         </ul>
         <Link className="text-link" href="/matthew">
           看完整馬太目錄 →
-        </Link>
-      </section>
-
-      <section className="home-strip">
-        <h2>公仔角色 · 每日智慧</h2>
-        <p className="section-lead">公仔角色讀經得著提醒、安慰與鼓勵；也可留言彼此建立。</p>
-        <Link className="btn soft" href="/daily">
-          打開今日故事
-        </Link>
-      </section>
-
-      <section className="home-devotion-tease">
-        <h2>今日靈修</h2>
-        <p className="section-lead">看完故事，留下片刻安靜，與經文對話。</p>
-        <Link className="btn soft" href="/devotion">
-          進入靈修
         </Link>
       </section>
     </main>
