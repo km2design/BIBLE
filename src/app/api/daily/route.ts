@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const ip = clientIp(request)
-  const allowed = await takeRateLimit(`daily:${ip}`, 30, 60_000, { failOpen: true })
+  const allowed = await takeRateLimit(`daily:${ip}`, 30, 60_000)
   if (!allowed) {
     return NextResponse.json({ error: '請求過於頻繁，請稍後再試' }, { status: 429 })
   }

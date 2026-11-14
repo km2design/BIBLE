@@ -21,7 +21,7 @@ type CommentRow = {
 
 export async function GET(request: Request) {
   const ip = clientIp(request)
-  const allowed = await takeRateLimit(`comments-read:${ip}`, 60, 60_000, { failOpen: true })
+  const allowed = await takeRateLimit(`comments-read:${ip}`, 60, 60_000)
   if (!allowed) {
     return NextResponse.json({ error: '請求過於頻繁，請稍後再試' }, { status: 429 })
   }
@@ -45,13 +45,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const ip = clientIp(request)
-  const allowedMinute = await takeRateLimit(`comments-write:${ip}`, 5, 60_000, { failOpen: false })
+  const allowedMinute = await takeRateLimit(`comments-write:${ip}`, 5, 60_000)
   if (!allowedMinute) {
     return NextResponse.json({ error: '留言太頻繁，請稍後再試' }, { status: 429 })
   }
-  const allowedDay = await takeRateLimit(`comments-write-day:${ip}`, 30, 86_400_000, {
-    failOpen: false,
-  })
+  const allowedDay = await takeRateLimit(`comments-write-day:${ip}`, 30, 86_400_000)
   if (!allowedDay) {
     return NextResponse.json({ error: '今日留言已達上限，請明天再來' }, { status: 429 })
   }
