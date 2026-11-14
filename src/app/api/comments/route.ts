@@ -7,6 +7,7 @@ import {
   sanitizeBody,
   sanitizeNickname,
 } from '../../../lib/moderation'
+import { clientIp, takeRateLimit } from '../../../lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,12 @@ type CommentRow = {
 }
 
 export async function GET(request: Request) {
+  const ip = clientIp(request)
+  const allowed = await takeRateLimit(`comments-read:${ip}`, 60, 60_000, { failOpen: true })
+  if (!allowed) {
+    return NextResponse.json({ error: '請求過於頻繁，請稍後再試' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date') || dateKey()
   try {
@@ -37,6 +44,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const ip = clientIp(request)
+  const allowedMinute = await takeRateLimit(`comments-write:${ip}`, 5, 60_000, { failOpen: false })
+  if (!allowedMinute) {
+    return NextResponse.json({ error: '留言太頻繁，請稍後再試' }, { status: 429 })
+  }
+  const allowedDay = await takeRateLimit(`comments-write-day:${ip}`, 30, 86_400_000, {
+    failOpen: false,
+  })
+  if (!allowedDay) {
+    return NextResponse.json({ error: '今日留言已達上限，請明天再來' }, { status: 429 })
+  }
+
   let payload: { date?: string; nickname?: string; body?: string }
   try {
     payload = (await request.json()) as { date?: string; nickname?: string; body?: string }
@@ -71,7 +90,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ comment: rows[0], rules: COMMENT_RULES })
   } catch {
     return NextResponse.json(
-      { error: '暫時無法儲存留言（示範環境）。請稍後再試。', rules: COMMENT_RULES },
+      { error: '暫時無法儲存留言，請稍後再試。', rules: COMMENT_RULES },
       { status: 503 },
     )
   }
