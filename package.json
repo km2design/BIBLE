@@ -2,28 +2,28 @@
   "name": "guangdao",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "next dev -H 127.0.0.1 -p 3000",
+    "build": "next build && node scripts/migrate.mjs",
+    "start": "next start -H 127.0.0.1 -p 3000",
     "lint": "oxlint",
-    "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@fontsource/noto-serif-tc": "^5.3.1",
+    "next": "^15.5.29",
+    "pg": "^8.23.1",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.5"
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.90.0",
     "playwright": "^1.49.0",
-    "typescript": "~7.0.2",
-    "vite": "^8.3.6"
+    "typescript": "^5.9.3"
   }
 }

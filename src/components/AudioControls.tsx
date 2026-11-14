@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { useAudioSettings } from '../context/AudioSettings'
 
 export function AudioControls({ className = '' }: { className?: string }) {
@@ -17,7 +19,7 @@ export function AudioControls({ className = '' }: { className?: string }) {
         <span aria-hidden>{audio.masterOn ? '♪' : '✕'}</span>
         <small>{audio.masterOn ? '開' : '關'}</small>
       </button>
-      <Link to="/settings" className="icon-btn settings-btn" aria-label="音效設定" title="設定">
+      <Link href="/settings" className="icon-btn settings-btn" aria-label="音效設定" title="設定">
         <span aria-hidden>⚙</span>
       </Link>
     </div>

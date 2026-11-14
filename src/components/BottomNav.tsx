@@ -1,16 +1,27 @@
-import { NavLink, useLocation } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export function BottomNav() {
-  const { pathname } = useLocation()
+  const pathname = usePathname()
   if (pathname.startsWith('/watch') || pathname.startsWith('/settings')) return null
+
+  const item = (href: string, label: string, exact = false) => {
+    const active = exact ? pathname === href : pathname.startsWith(href)
+    return (
+      <Link href={href} className={active ? 'active' : undefined}>
+        {label}
+      </Link>
+    )
+  }
 
   return (
     <nav className="bottom-nav" aria-label="主要導覽">
-      <NavLink to="/" end>
-        首頁
-      </NavLink>
-      <NavLink to="/library">繪卷</NavLink>
-      <NavLink to="/devotion">靈修</NavLink>
+      {item('/', '首頁', true)}
+      {item('/daily', '每日')}
+      {item('/library', '繪卷')}
+      {item('/devotion', '靈修')}
     </nav>
   )
 }
