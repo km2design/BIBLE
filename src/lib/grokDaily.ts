@@ -216,3 +216,25 @@ export async function getDailyStory(date: string): Promise<{ story: DailyStory; 
     return { story: sample, source: 'sample' }
   }
 }
+
+/**
+ * Cron entry: ensure today's story exists in cache.
+ * Safe to call repeatedly — uses the same once-per-day claim lock.
+ */
+export async function ensureTodayStory(): Promise<{
+  date: string
+  source: string
+  created: boolean
+  title: string
+}> {
+  const date = dateKey()
+  const before = await readCache(date)
+  const alreadyReady = Boolean(before && before.source !== 'pending')
+  const { story, source } = await getDailyStory(date)
+  return {
+    date,
+    source,
+    created: !alreadyReady,
+    title: story.title,
+  }
+}

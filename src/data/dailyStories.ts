@@ -132,11 +132,14 @@ const pool: Omit<DailyStory, 'date'>[] = [
   },
 ]
 
+/** Calendar date in Asia/Hong_Kong (YYYY-MM-DD). */
 export function dateKey(d = new Date()): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hong_Kong',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
 }
 
 export function getSampleStoryForDate(date = dateKey()): DailyStory {

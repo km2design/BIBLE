@@ -1,0 +1,29 @@
+# 每天香港時間約 00:10 自動觸發 Grok 生成今日故事（寫入 App 快取）
+# 請在 GitHub repo Settings → Secrets 設定：
+#   CRON_SECRET  — 與 Cursor App 綁定的同名密鑰一致
+#   APP_URL      — 已發布 App 網址，例如 https://guangdao.apps.grok.bot
+name: Daily Grok story
+
+on:
+  schedule:
+    # 16:10 UTC = 00:10 Asia/Hong_Kong
+    - cron: '10 16 * * *'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily story cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$APP_URL" ]; then
+            echo "Missing CRON_SECRET or APP_URL repo secrets; skip."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL%/}/api/cron/daily-story"
