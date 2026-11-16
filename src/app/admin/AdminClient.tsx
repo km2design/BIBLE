@@ -43,6 +43,8 @@ export function AdminClient() {
   const [tab, setTab] = useState<Tab>('tomorrow')
   const [story, setStory] = useState<DailyStory>(EMPTY)
   const [source, setSource] = useState('')
+  const [hasImage, setHasImage] = useState(false)
+  const [imageUrl, setImageUrl] = useState('/daily/default-hero.jpg')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [comments, setComments] = useState<AdminComment[]>([])
@@ -86,6 +88,8 @@ export function AdminClient() {
       const data = (await res.json()) as {
         story?: DailyStory
         source?: string
+        hasImage?: boolean
+        imageUrl?: string
         error?: string
       }
       if (!res.ok) {
@@ -94,6 +98,8 @@ export function AdminClient() {
       }
       setStory(data.story ? { ...data.story, date } : { ...EMPTY, date })
       setSource(data.source || '')
+      setHasImage(Boolean(data.hasImage))
+      setImageUrl(data.imageUrl || '/daily/default-hero.jpg')
     } finally {
       setBusy(false)
     }
@@ -140,7 +146,7 @@ export function AdminClient() {
   async function generate() {
     const date = tab === 'tomorrow' ? tomorrow : today
     setBusy(true)
-    setStatus('')
+    setStatus('正在生成文字與插畫…')
     try {
       const res = await fetch('/api/admin/story/generate', {
         method: 'POST',
@@ -150,6 +156,8 @@ export function AdminClient() {
       const data = (await res.json()) as {
         story?: DailyStory
         source?: string
+        hasImage?: boolean
+        imageUrl?: string
         message?: string
         error?: string
       }
@@ -159,7 +167,45 @@ export function AdminClient() {
       }
       if (data.story) setStory({ ...data.story, date })
       if (data.source) setSource(data.source)
+      setHasImage(Boolean(data.hasImage))
+      setImageUrl(data.imageUrl || `/api/admin/story/image?date=${encodeURIComponent(date)}&t=${Date.now()}`)
       setStatus(data.message || '已生成')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function regenerateImage() {
+    const date = tab === 'tomorrow' ? tomorrow : today
+    setBusy(true)
+    setStatus('正在依目前文稿重產插畫…')
+    try {
+      const res = await fetch('/api/admin/story/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...story, date, force: true }),
+      })
+      const data = (await res.json()) as {
+        story?: DailyStory
+        source?: string
+        hasImage?: boolean
+        imageUrl?: string
+        message?: string
+        error?: string
+        generated?: boolean
+      }
+      if (!res.ok && !data.hasImage) {
+        setStatus(data.error || data.message || '重產失敗')
+        return
+      }
+      if (data.story) setStory({ ...data.story, date })
+      if (data.source) setSource(data.source)
+      setHasImage(Boolean(data.hasImage))
+      setImageUrl(
+        data.imageUrl ||
+          `/api/admin/story/image?date=${encodeURIComponent(date)}&t=${Date.now()}`,
+      )
+      setStatus(data.message || (data.generated ? '已重產插畫' : '插畫狀態已更新'))
     } finally {
       setBusy(false)
     }
@@ -178,6 +224,8 @@ export function AdminClient() {
       const data = (await res.json()) as {
         story?: DailyStory
         source?: string
+        hasImage?: boolean
+        imageUrl?: string
         message?: string
         error?: string
       }
@@ -187,7 +235,9 @@ export function AdminClient() {
       }
       if (data.story) setStory(data.story)
       if (data.source) setSource(data.source)
-      setStatus(data.message || '已儲存')
+      if (typeof data.hasImage === 'boolean') setHasImage(data.hasImage)
+      if (data.imageUrl) setImageUrl(data.imageUrl)
+      setStatus(data.message || '已核准')
     } finally {
       setBusy(false)
     }
@@ -320,17 +370,34 @@ export function AdminClient() {
 
       {tab !== 'comments' ? (
         <section className="admin-story">
-          <p className="admin-meta">
-            來源：{source || '—'} · {busy ? '處理中…' : '可編輯'}
+          <p className="admin-lead">
+            流程：① 預先生成（文字＋插畫）→ ② 預覽並批改所有文字 → ③ 可依改稿重產插畫 → ④ 儲存核准。
+            {tab === 'tomorrow' ? '明日內容核准後，到了該日才會公開。' : '今日核准後立即套用公開頁。'}
           </p>
+          <p className="admin-meta">
+            來源：{source || '—'} · 插畫：{hasImage ? '已預產' : '預設圖'} ·{' '}
+            {busy ? '處理中…' : '可編輯'}
+          </p>
+
+          <figure className="admin-image-preview">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt="當日插畫預覽" width={392} height={584} />
+            <figcaption>{hasImage ? '故事插畫預覽（僅後台可見）' : '尚無生成圖，顯示預設英雄圖'}</figcaption>
+          </figure>
+
           <div className="admin-actions">
             <button type="button" className="btn soft" onClick={generate} disabled={busy}>
-              預先生成
+              ① 預先生成
+            </button>
+            <button type="button" className="btn soft" onClick={regenerateImage} disabled={busy}>
+              ③ 重產插畫
             </button>
             <button type="button" className="btn primary" onClick={save} disabled={busy}>
-              儲存核准
+              ④ 儲存核准
             </button>
           </div>
+
+          <h2 className="admin-section-title">② 批改文稿</h2>
           <label>
             標題
             <input
@@ -339,7 +406,7 @@ export function AdminClient() {
             />
           </label>
           <label>
-            故事
+            故事正文
             <textarea
               rows={6}
               value={story.story}
@@ -354,7 +421,7 @@ export function AdminClient() {
             />
           </label>
           <label>
-            經文
+            經文內容
             <textarea
               rows={3}
               value={story.verse}
@@ -392,7 +459,7 @@ export function AdminClient() {
             />
           </label>
           <label>
-            靈修內容
+            靈修反思
             <textarea
               rows={3}
               value={story.devotion}
@@ -400,7 +467,7 @@ export function AdminClient() {
             />
           </label>
           <label>
-            禱告
+            簡短禱告
             <textarea
               rows={2}
               value={story.prayer}

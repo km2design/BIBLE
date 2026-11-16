@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
 import { tomorrowKey } from '../../../../../data/dailyStories'
 import { requireAdmin } from '../../../../../lib/adminAuth'
-import { ensureStoryForDate, getAdminStory, isAdminEditableDate } from '../../../../../lib/grokDaily'
+import {
+  adminImagePreviewUrl,
+  ensureStoryForDate,
+  getAdminStory,
+  isAdminEditableDate,
+  regenerateAdminImage,
+} from '../../../../../lib/grokDaily'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,13 +28,33 @@ export async function POST(request: Request) {
   }
 
   const result = await ensureStoryForDate(date)
-  const row = await getAdminStory(date)
+  // If text existed but image was missing, ensureStoryForDate may have filled it;
+  // if still missing (e.g. no key earlier path), try once more without force.
+  let row = await getAdminStory(date)
+  let imageGenerated = result.imageGenerated
+  if (row && !row.hasImage) {
+    const img = await regenerateAdminImage(date, undefined, false)
+    imageGenerated = imageGenerated || img.generated
+    row = await getAdminStory(date)
+  }
+
+  const hasImage = Boolean(row?.hasImage)
+  const parts: string[] = []
+  if (result.created) parts.push('已生成文字草稿')
+  else parts.push('已載入既有文稿（未覆寫已核准稿）')
+  if (imageGenerated) parts.push('已預產插畫，可在上方預覽')
+  else if (hasImage) parts.push('插畫已就緒')
+  else parts.push('尚無插畫（缺金鑰或生成失敗則用預設圖；可稍後重產）')
+  parts.push('請編輯文字後「儲存核准」；需要可「重產插畫」')
+
   return NextResponse.json({
     ok: true,
     ...result,
+    imageGenerated,
+    hasImage,
+    imageUrl: hasImage ? adminImagePreviewUrl(date, Date.now()) : '/daily/default-hero.jpg',
     story: row?.story ?? null,
-    message: result.created
-      ? '已生成草稿，可在下方批改後儲存。'
-      : '已有內容（未覆寫已核准稿）；可繼續批改。',
+    source: row?.source ?? result.source,
+    message: parts.join('；'),
   })
 }

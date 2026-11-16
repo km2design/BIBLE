@@ -1757,6 +1757,43 @@ button.back-link {
   font-size: 0.88rem;
 }
 
+.admin-lead {
+  color: var(--ink-muted);
+  line-height: 1.7;
+  font-size: 0.92rem;
+}
+
+.admin-section-title {
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-soft);
+  margin-top: 0.35rem;
+}
+
+.admin-image-preview {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  overflow: hidden;
+  background: rgba(8, 18, 26, 0.55);
+}
+
+.admin-image-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.admin-image-preview figcaption {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+
 .admin-comment-list {
   display: flex;
   flex-direction: column;

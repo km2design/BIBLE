@@ -184,8 +184,9 @@ async function ensureStoryImage(
   date: string,
   story: DailyStory,
   apiKey: string | undefined,
+  force = false,
 ): Promise<boolean> {
-  if (await hasStoredImage(date)) return false
+  if (!force && (await hasStoredImage(date))) return false
   if (!apiKey) return false
   try {
     const image = await generateStoryImage(story, apiKey)
@@ -195,6 +196,15 @@ async function ensureStoryImage(
   } catch {
     return false
   }
+}
+
+export async function storyHasImage(date: string): Promise<boolean> {
+  return hasStoredImage(date)
+}
+
+export function adminImagePreviewUrl(date: string, bust?: number): string {
+  const q = bust ? `&t=${bust}` : ''
+  return `/api/admin/story/image?date=${encodeURIComponent(date)}${q}`
 }
 
 async function callGrok(date: string, apiKey: string): Promise<DailyStory | null> {
@@ -467,13 +477,24 @@ export async function ensureStoryForDate(date: string): Promise<{
 /** Admin: load a day including drafts that are not yet public (e.g. tomorrow). */
 export async function getAdminStory(
   date: string,
-): Promise<{ story: DailyStory; source: string } | null> {
+): Promise<{ story: DailyStory; source: string; hasImage: boolean } | null> {
   if (!isIsoDate(date)) return null
   const cached = await readCache(date)
-  if (cached && cached.source !== 'pending') return cached
+  const hasImage = await hasStoredImage(date)
+  if (cached && cached.source !== 'pending') {
+    return {
+      ...cached,
+      hasImage,
+      story: {
+        ...cached.story,
+        imageUrl: hasImage ? adminImagePreviewUrl(date) : DEFAULT_HERO_PATH,
+      },
+    }
+  }
   return {
     story: withImageUrl(getSampleStoryForDate(date), false),
     source: 'sample-ephemeral',
+    hasImage: false,
   }
 }
 
@@ -542,4 +563,116 @@ export async function saveApprovedStory(
 export function isAdminEditableDate(date: string): boolean {
   if (!isIsoDate(date)) return false
   return date === dateKey() || date === tomorrowKey()
+}
+
+/**
+ * Persist current editor text without flipping an approved row back to sample.
+ * Used before regenerating an illustration from edited copy.
+ */
+export async function saveEditorStory(
+  date: string,
+  patch: AdminStoryPatch,
+): Promise<{ story: DailyStory; source: string }> {
+  if (!isIsoDate(date)) throw new Error('invalid date')
+  const existing = await readCache(date)
+  const base =
+    existing && existing.source !== 'pending'
+      ? existing.story
+      : getSampleStoryForDate(date)
+
+  const kind = (
+    patch.wisdomKind && KINDS.includes(patch.wisdomKind as WisdomKind)
+      ? patch.wisdomKind
+      : base.wisdomKind
+  ) as WisdomKind
+
+  const next: DailyStory = {
+    ...base,
+    date,
+    title: (patch.title ?? base.title).trim() || base.title,
+    story: (patch.story ?? base.story).trim() || base.story,
+    verseRef: (patch.verseRef ?? base.verseRef).trim() || base.verseRef,
+    verse: (patch.verse ?? base.verse).trim() || base.verse,
+    wisdomKind: kind,
+    wisdom: (patch.wisdom ?? base.wisdom).trim() || base.wisdom,
+    devotionTitle: (patch.devotionTitle ?? base.devotionTitle).trim() || base.devotionTitle,
+    devotion: (patch.devotion ?? base.devotion).trim() || base.devotion,
+    prayer: (patch.prayer ?? base.prayer).trim() || base.prayer,
+    sample: existing?.source === 'sample',
+  }
+
+  const source =
+    existing?.source === 'approved' || existing?.source === 'grok'
+      ? existing.source
+      : 'sample'
+
+  await sql(
+    `insert into daily_stories (story_date, payload, source)
+     values ($1::date, $2::jsonb, $3)
+     on conflict (story_date) do update
+       set payload = excluded.payload,
+           source = case
+             when daily_stories.source in ('approved', 'grok') then daily_stories.source
+             else excluded.source
+           end`,
+    [date, JSON.stringify({ ...next, imageUrl: undefined }), source],
+  )
+
+  const saved = await readCache(date)
+  return saved ?? { story: withImageUrl(next, false), source }
+}
+
+/**
+ * Admin: generate or force-regenerate the day's illustration from story text.
+ */
+export async function regenerateAdminImage(
+  date: string,
+  patch?: AdminStoryPatch,
+  force = true,
+): Promise<{ generated: boolean; hasImage: boolean; reason?: string; story: DailyStory; source: string }> {
+  if (!isIsoDate(date)) {
+    throw new Error('invalid date')
+  }
+
+  let saved: { story: DailyStory; source: string }
+  if (patch) {
+    saved = await saveEditorStory(date, patch)
+  } else {
+    const row = await getAdminStory(date)
+    saved = {
+      story: row?.story ?? getSampleStoryForDate(date),
+      source: row?.source === 'sample-ephemeral' ? 'sample' : row?.source || 'sample',
+    }
+    if (!row || row.source === 'sample-ephemeral') {
+      saved = await saveEditorStory(date, saved.story)
+    }
+  }
+
+  const apiKey = process.env.XAI_API_KEY?.trim()
+  if (!apiKey) {
+    return {
+      generated: false,
+      hasImage: await hasStoredImage(date),
+      reason: '缺少 XAI_API_KEY，改顯示預設英雄圖',
+      story: saved.story,
+      source: saved.source,
+    }
+  }
+
+  const generated = await ensureStoryImage(date, saved.story, apiKey, force)
+  const hasImage = await hasStoredImage(date)
+  return {
+    generated,
+    hasImage,
+    reason: generated
+      ? undefined
+      : force
+        ? '插畫生成失敗，請稍後再試'
+        : '插畫已存在',
+    story: {
+      ...saved.story,
+      imageUrl: hasImage ? adminImagePreviewUrl(date, Date.now()) : DEFAULT_HERO_PATH,
+    },
+    source: saved.source,
+  }
 }
