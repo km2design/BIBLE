@@ -1408,6 +1408,28 @@ button.back-link {
   color: var(--ink-muted);
 }
 
+.hp-field {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+.comment-reply {
+  margin-left: 0.85rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(212, 165, 116, 0.28);
+}
+
+.comment-admin-badge {
+  margin-left: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
 .comment-form input,
 .comment-form textarea {
   font: inherit;
@@ -1651,4 +1673,111 @@ button.back-link {
     background:
       radial-gradient(ellipse at 50% 0%, #1a2834, #071017 60%);
   }
+}
+
+/* —— Admin —— */
+.admin-page {
+  padding-top: 1rem;
+}
+
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-login,
+.admin-story,
+.admin-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.admin-login label,
+.admin-story label,
+.admin-comments label,
+.admin-reply label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.admin-login input,
+.admin-story input,
+.admin-story textarea,
+.admin-story select,
+.admin-comments input,
+.admin-reply textarea {
+  background: rgba(8, 18, 26, 0.55);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-tabs button {
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  color: var(--ink-muted);
+  border: 1px solid transparent;
+}
+
+.admin-tabs button.active {
+  color: var(--gold-soft);
+  border-color: rgba(212, 165, 116, 0.35);
+  background: rgba(212, 165, 116, 0.08);
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.admin-status,
+.admin-meta {
+  padding: 0.35rem 1.5rem;
+  color: var(--gold-soft);
+  font-size: 0.88rem;
+}
+
+.admin-comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.admin-comment-list li {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-comment-list li.is-hidden {
+  opacity: 0.45;
+}
+
+.admin-comment-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
 }

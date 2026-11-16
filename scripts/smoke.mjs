@@ -18,6 +18,53 @@ await page.goto(base, { waitUntil: 'networkidle' })
 ok('home brand', await page.getByText('光道', { exact: true }).first().isVisible())
 await page.screenshot({ path: `${out}/home_hero.png` })
 
+// Admin fail-closed / optional login when secrets present
+const adminMe = await page.evaluate(async () => {
+  const res = await fetch('/api/admin/me')
+  return { status: res.status, body: await res.json().catch(() => ({})) }
+})
+if (adminMe.status === 503) {
+  ok('admin disabled without secrets', true)
+  await page.goto(`${base}/admin`, { waitUntil: 'networkidle' })
+  ok('admin page fail-closed', await page.getByText(/未啟用|缺少環境密鑰/).isVisible())
+} else {
+  ok('admin enabled with secrets', adminMe.status === 401 || adminMe.status === 200, String(adminMe.status))
+  const user = process.env.ADMIN_USERNAME || 'ADMIN'
+  const pass = process.env.ADMIN_PASSWORD || ''
+  if (pass) {
+    await page.goto(`${base}/admin`, { waitUntil: 'networkidle' })
+    await page.locator('.admin-login input').nth(0).fill(user)
+    await page.locator('.admin-login input[type="password"]').fill(pass)
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/api/admin/login') && r.status() === 200),
+      page.getByRole('button', { name: '登入' }).click(),
+    ])
+    await page.getByRole('button', { name: /明日繪卷/ }).waitFor({ state: 'visible', timeout: 10000 })
+    ok('admin login', await page.getByRole('button', { name: '登出' }).isVisible())
+    ok('admin tomorrow tab', await page.getByRole('button', { name: /明日繪卷/ }).isVisible())
+    await page.getByRole('button', { name: /明日繪卷/ }).click()
+    await page.locator('.admin-story').waitFor({ state: 'visible', timeout: 10000 })
+    await page.getByRole('button', { name: '預先生成' }).click()
+    await page.waitForTimeout(2500)
+    const titleBox = page.locator('.admin-story input').first()
+    await titleBox.fill('煙測明日標題')
+    await page.getByRole('button', { name: '儲存核准' }).click()
+    await page.getByText(/已儲存/).waitFor({ state: 'visible', timeout: 10000 })
+    ok('admin save tomorrow', await page.getByText(/已儲存/).isVisible())
+    // Public must not see tomorrow yet
+    const tomorrowLeak = await page.evaluate(async () => {
+      const me = await (await fetch('/api/admin/me')).json()
+      const res = await fetch(`/api/daily?date=${encodeURIComponent(me.tomorrow)}`)
+      return { status: res.status, tomorrow: me.tomorrow }
+    })
+    ok('tomorrow not public yet', tomorrowLeak.status === 404, JSON.stringify(tomorrowLeak))
+    await page.getByRole('button', { name: '留言', exact: true }).click()
+    await page.getByText('版主留言').waitFor({ state: 'visible', timeout: 10000 })
+    ok('admin comments tab', await page.getByText('版主留言').isVisible())
+  }
+}
+await page.goto(base, { waitUntil: 'networkidle' })
+
 const manifest = await page.evaluate(async () => {
   const link = document.querySelector('link[rel="manifest"]')
   const href = link?.getAttribute('href') || '/manifest.webmanifest'
@@ -134,6 +181,23 @@ await nick.waitFor({ state: 'visible', timeout: 15000 })
 await nick.scrollIntoViewIfNeeded()
 await nick.fill('小羊')
 await page.getByPlaceholder('分享你的反思、鼓勵或禱告…').fill('今天被安慰到了，謝謝。')
+// honeypot must stay empty; filled honeypot should not create a real comment
+const honeypotBlocked = await page.evaluate(async () => {
+  const res = await fetch('/api/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date()),
+      nickname: 'bot',
+      body: 'spam payload here',
+      website: 'https://spam.example',
+      startedAt: Date.now() - 5000,
+    }),
+  })
+  const data = await res.json()
+  return { ok: res.ok, id: data.comment?.id }
+})
+ok('honeypot swallows spam', honeypotBlocked.ok && honeypotBlocked.id === '0', JSON.stringify(honeypotBlocked))
 await page.getByRole('button', { name: '送出留言' }).click()
 await page.waitForTimeout(800)
 ok('comment posted', await page.getByText('今天被安慰到了').first().isVisible())

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { NextResponse } from 'next/server'
+import { dateKey } from '../../../../data/dailyStories'
 import { getStoryImage } from '../../../../lib/grokDaily'
 import { clientIp, takeRateLimit } from '../../../../lib/rateLimit'
 
@@ -34,7 +35,8 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date') || ''
-  if (!isIsoDate(date)) {
+  if (!isIsoDate(date) || date > dateKey()) {
+    // Do not leak day-ahead illustrations before the public day.
     return defaultHeroResponse()
   }
 

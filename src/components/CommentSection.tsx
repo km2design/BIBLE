@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { COMMENT_RULES } from '../lib/moderation'
 
 type Comment = {
@@ -8,15 +8,19 @@ type Comment = {
   nickname: string
   body: string
   created_at: string
+  parent_id?: string | null
+  is_admin?: boolean
 }
 
 export function CommentSection({ date }: { date: string }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [nickname, setNickname] = useState('')
   const [body, setBody] = useState('')
+  const [honeypot, setHoneypot] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [rules, setRules] = useState(COMMENT_RULES)
+  const startedAt = useRef(Date.now())
 
   async function load() {
     const res = await fetch(`/api/comments?date=${encodeURIComponent(date)}`)
@@ -26,6 +30,7 @@ export function CommentSection({ date }: { date: string }) {
   }
 
   useEffect(() => {
+    startedAt.current = Date.now()
     void load()
   }, [date])
 
@@ -37,7 +42,13 @@ export function CommentSection({ date }: { date: string }) {
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, nickname, body }),
+        body: JSON.stringify({
+          date,
+          nickname,
+          body,
+          website: honeypot,
+          startedAt: startedAt.current,
+        }),
       })
       const data = (await res.json()) as { error?: string; comment?: Comment }
       if (!res.ok) {
@@ -45,8 +56,12 @@ export function CommentSection({ date }: { date: string }) {
         return
       }
       setBody('')
-      if (data.comment) setComments((prev) => [data.comment!, ...prev])
-      else await load()
+      startedAt.current = Date.now()
+      if (data.comment && data.comment.id !== '0') {
+        setComments((prev) => [...prev, data.comment!])
+      } else {
+        await load()
+      }
     } catch {
       setError('網路錯誤，請稍後再試')
     } finally {
@@ -66,6 +81,16 @@ export function CommentSection({ date }: { date: string }) {
             maxLength={20}
             placeholder="怎麼稱呼你"
             required
+          />
+        </label>
+        {/* Honeypot — visually hidden; leave empty */}
+        <label className="hp-field" aria-hidden="true">
+          網站
+          <input
+            tabIndex={-1}
+            autoComplete="off"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
           />
         </label>
         <label>
@@ -91,8 +116,11 @@ export function CommentSection({ date }: { date: string }) {
           <li className="comment-empty">還沒有留言，來當第一個溫柔回應的人吧。</li>
         ) : (
           comments.map((c) => (
-            <li key={c.id}>
-              <strong>{c.nickname}</strong>
+            <li key={c.id} className={c.parent_id ? 'comment-reply' : undefined}>
+              <strong>
+                {c.nickname}
+                {c.is_admin ? <span className="comment-admin-badge">版主</span> : null}
+              </strong>
               <p>{c.body}</p>
             </li>
           ))

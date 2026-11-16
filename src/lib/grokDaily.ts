@@ -2,6 +2,7 @@ import {
   DAILY_ARCHIVE_START,
   dateKey,
   getSampleStoryForDate,
+  tomorrowKey,
   type DailyStory,
   type WisdomKind,
 } from '../data/dailyStories'
@@ -164,9 +165,15 @@ async function saveStoryImage(date: string, mime: string, bytes: Buffer): Promis
   await sql(
     `update daily_stories
      set image_mime = $2, image_bytes = $3
-     where story_date = $1::date and source in ('grok', 'sample')`,
+     where story_date = $1::date and source in ('grok', 'sample', 'approved')`,
     [date, mime, bytes],
   )
+}
+
+const PUBLIC_SOURCES = new Set(['grok', 'sample', 'approved'])
+
+function isFinishedSource(source: string): boolean {
+  return PUBLIC_SOURCES.has(source)
 }
 
 /**
@@ -257,13 +264,13 @@ export async function getDailyStory(date: string): Promise<{ story: DailyStory; 
   const safeDate = isIsoDate(date) ? date : today
 
   const cached = await readCache(safeDate)
-  if (cached && cached.source !== 'pending') return cached
+  if (cached && isFinishedSource(cached.source)) return cached
 
   if (cached?.source === 'pending') {
     for (let i = 0; i < 8; i++) {
       await new Promise((r) => setTimeout(r, 250))
       const again = await readCache(safeDate)
-      if (again && again.source !== 'pending') return again
+      if (again && isFinishedSource(again.source)) return again
     }
   }
 
@@ -281,7 +288,7 @@ export async function getArchivedStory(
 ): Promise<{ story: DailyStory; source: string } | null> {
   if (!isIsoDate(date)) return null
   const cached = await readCache(date)
-  if (!cached || cached.source === 'pending') return null
+  if (!cached || !isFinishedSource(cached.source)) return null
   return cached
 }
 
@@ -297,11 +304,12 @@ export async function listDailyHistory(limit = 60): Promise<DailyHistoryItem[]> 
       `select story_date::text as date, payload, source,
               (image_bytes is not null) as has_image
        from daily_stories
-       where source in ('grok', 'sample')
+       where source in ('grok', 'sample', 'approved')
          and story_date >= $2::date
+         and story_date <= $3::date
        order by story_date desc
        limit $1`,
-      [capped, DAILY_ARCHIVE_START],
+      [capped, DAILY_ARCHIVE_START, dateKey()],
     )
     const items: DailyHistoryItem[] = []
     for (const row of rows) {
@@ -353,16 +361,33 @@ export async function ensureTodayStory(): Promise<{
   imageGenerated: boolean
   title: string
 }> {
-  const date = dateKey()
+  return ensureStoryForDate(dateKey())
+}
+
+/**
+ * Generate or upgrade a specific calendar day's story (cron / admin day-ahead).
+ * Does not overwrite admin-approved rows unless they still need an image.
+ */
+export async function ensureStoryForDate(date: string): Promise<{
+  date: string
+  source: string
+  created: boolean
+  imageGenerated: boolean
+  title: string
+}> {
+  if (!isIsoDate(date)) {
+    return { date, source: 'sample', created: false, imageGenerated: false, title: '' }
+  }
+
   const apiKey = process.env.XAI_API_KEY?.trim()
   const before = await readCache(date)
 
-  if (before && before.source === 'grok') {
+  if (before && (before.source === 'grok' || before.source === 'approved')) {
     const imageGenerated = await ensureStoryImage(date, before.story, apiKey)
     const refreshed = await readCache(date)
     return {
       date,
-      source: 'grok',
+      source: before.source,
       created: false,
       imageGenerated,
       title: refreshed?.story.title ?? before.story.title,
@@ -437,4 +462,84 @@ export async function ensureTodayStory(): Promise<{
     await finalizeCache(date, sample, 'sample')
     return { date, source: 'sample', created: true, imageGenerated: false, title: sample.title }
   }
+}
+
+/** Admin: load a day including drafts that are not yet public (e.g. tomorrow). */
+export async function getAdminStory(
+  date: string,
+): Promise<{ story: DailyStory; source: string } | null> {
+  if (!isIsoDate(date)) return null
+  const cached = await readCache(date)
+  if (cached && cached.source !== 'pending') return cached
+  return {
+    story: withImageUrl(getSampleStoryForDate(date), false),
+    source: 'sample-ephemeral',
+  }
+}
+
+const EDITABLE_FIELDS = [
+  'title',
+  'story',
+  'verseRef',
+  'verse',
+  'wisdomKind',
+  'wisdom',
+  'devotionTitle',
+  'devotion',
+  'prayer',
+] as const
+
+export type AdminStoryPatch = Partial<Pick<DailyStory, (typeof EDITABLE_FIELDS)[number]>>
+
+/**
+ * Admin save: upsert today's or tomorrow's story as approved.
+ * Public site serves approved content once the calendar day is reached.
+ */
+export async function saveApprovedStory(
+  date: string,
+  patch: AdminStoryPatch,
+): Promise<{ story: DailyStory; source: string }> {
+  if (!isIsoDate(date)) throw new Error('invalid date')
+  const existing = await readCache(date)
+  const base =
+    existing && existing.source !== 'pending'
+      ? existing.story
+      : getSampleStoryForDate(date)
+
+  const kind = (
+    patch.wisdomKind && KINDS.includes(patch.wisdomKind as WisdomKind)
+      ? patch.wisdomKind
+      : base.wisdomKind
+  ) as WisdomKind
+
+  const next: DailyStory = {
+    ...base,
+    date,
+    title: (patch.title ?? base.title).trim() || base.title,
+    story: (patch.story ?? base.story).trim() || base.story,
+    verseRef: (patch.verseRef ?? base.verseRef).trim() || base.verseRef,
+    verse: (patch.verse ?? base.verse).trim() || base.verse,
+    wisdomKind: kind,
+    wisdom: (patch.wisdom ?? base.wisdom).trim() || base.wisdom,
+    devotionTitle: (patch.devotionTitle ?? base.devotionTitle).trim() || base.devotionTitle,
+    devotion: (patch.devotion ?? base.devotion).trim() || base.devotion,
+    prayer: (patch.prayer ?? base.prayer).trim() || base.prayer,
+    sample: false,
+  }
+
+  await sql(
+    `insert into daily_stories (story_date, payload, source)
+     values ($1::date, $2::jsonb, 'approved')
+     on conflict (story_date) do update
+       set payload = excluded.payload, source = 'approved'`,
+    [date, JSON.stringify({ ...next, imageUrl: undefined })],
+  )
+
+  const saved = await readCache(date)
+  return saved ?? { story: withImageUrl(next, false), source: 'approved' }
+}
+
+export function isAdminEditableDate(date: string): boolean {
+  if (!isIsoDate(date)) return false
+  return date === dateKey() || date === tomorrowKey()
 }

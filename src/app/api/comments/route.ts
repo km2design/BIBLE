@@ -17,6 +17,8 @@ type CommentRow = {
   nickname: string
   body: string
   created_at: string
+  parent_id: string | null
+  is_admin: boolean
 }
 
 export async function GET(request: Request) {
@@ -30,10 +32,11 @@ export async function GET(request: Request) {
   const date = searchParams.get('date') || dateKey()
   try {
     const rows = await sql<CommentRow>(
-      `select id::text, story_date::text, nickname, body, created_at::text
+      `select id::text, story_date::text, nickname, body, created_at::text,
+              parent_id::text, is_admin
        from comments
        where story_date = $1::date and hidden = false
-       order by created_at desc
+       order by created_at asc
        limit 100`,
       [date],
     )
@@ -45,23 +48,49 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const ip = clientIp(request)
-  const allowedMinute = await takeRateLimit(`comments-write:${ip}`, 5, 60_000)
+  // Tightened limits + honeypot below.
+  const allowedMinute = await takeRateLimit(`comments-write:${ip}`, 3, 60_000)
   if (!allowedMinute) {
     return NextResponse.json({ error: '留言太頻繁，請稍後再試' }, { status: 429 })
   }
-  const allowedDay = await takeRateLimit(`comments-write-day:${ip}`, 30, 86_400_000)
+  const allowedDay = await takeRateLimit(`comments-write-day:${ip}`, 20, 86_400_000)
   if (!allowedDay) {
     return NextResponse.json({ error: '今日留言已達上限，請明天再來' }, { status: 429 })
   }
 
-  let payload: { date?: string; nickname?: string; body?: string }
+  let payload: {
+    date?: string
+    nickname?: string
+    body?: string
+    website?: string
+    company?: string
+    startedAt?: number
+  }
   try {
-    payload = (await request.json()) as { date?: string; nickname?: string; body?: string }
+    payload = (await request.json()) as typeof payload
   } catch {
     return NextResponse.json({ error: '格式錯誤' }, { status: 400 })
   }
 
+  // Honeypot: bots fill hidden fields; humans leave them empty.
+  if ((payload.website && payload.website.trim()) || (payload.company && payload.company.trim())) {
+    return NextResponse.json({ comment: { id: '0', nickname: 'ok', body: 'ok', created_at: new Date().toISOString() }, rules: COMMENT_RULES })
+  }
+
+  // Reject absurdly fast submits (< 1.2s) when client sends startedAt.
+  if (typeof payload.startedAt === 'number' && Number.isFinite(payload.startedAt)) {
+    const elapsed = Date.now() - payload.startedAt
+    if (elapsed >= 0 && elapsed < 1200) {
+      return NextResponse.json({ error: '請稍候再送出' }, { status: 429 })
+    }
+  }
+
   const date = payload.date || dateKey()
+  // Public comments only for today (and past archive days); block future spam targets.
+  if (date > dateKey()) {
+    return NextResponse.json({ error: '尚不可留言' }, { status: 400 })
+  }
+
   const nickname = sanitizeNickname(payload.nickname ?? '')
   const body = sanitizeBody(payload.body ?? '')
 
@@ -82,7 +111,8 @@ export async function POST(request: Request) {
     const rows = await sql<CommentRow>(
       `insert into comments (story_date, nickname, body)
        values ($1::date, $2, $3)
-       returning id::text, story_date::text, nickname, body, created_at::text`,
+       returning id::text, story_date::text, nickname, body, created_at::text,
+                 parent_id::text, is_admin`,
       [date, nickname, body],
     )
     return NextResponse.json({ comment: rows[0], rules: COMMENT_RULES })

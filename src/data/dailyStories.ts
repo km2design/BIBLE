@@ -145,6 +145,19 @@ export function dateKey(d = new Date()): string {
   }).format(d)
 }
 
+/** Tomorrow's calendar date in Asia/Hong_Kong (YYYY-MM-DD). */
+export function tomorrowKey(from = new Date()): string {
+  // Walk forward in 1h steps until the HK calendar day advances (handles DST-free HK cleanly).
+  const start = dateKey(from)
+  for (let i = 1; i <= 48; i++) {
+    const probe = new Date(from.getTime() + i * 60 * 60 * 1000)
+    const key = dateKey(probe)
+    if (key !== start) return key
+  }
+  // Fallback: add 24h
+  return dateKey(new Date(from.getTime() + 24 * 60 * 60 * 1000))
+}
+
 export function getSampleStoryForDate(date = dateKey()): DailyStory {
   // Day one of the archive is pinned to 「一句夠用」; later days rotate the pool.
   if (date === DAILY_ARCHIVE_START) {

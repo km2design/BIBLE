@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const { story, source } = await getDailyStory(today)
     return NextResponse.json({
       story,
-      source: source === 'grok' ? 'grok' : 'sample',
+      source: source === 'sample' ? 'sample' : 'cached',
     })
   }
 
@@ -45,6 +45,6 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     story: archived.story,
-    source: archived.source === 'grok' ? 'grok' : 'sample',
+    source: archived.source === 'sample' ? 'sample' : 'cached',
   })
 }
