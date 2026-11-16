@@ -25,7 +25,30 @@ ok('daily route', page.url().includes('/daily'))
 ok('daily wisdom', await page.getByText('人生智慧').isVisible())
 ok('daily devotion', await page.getByText('當日靈修反思').isVisible())
 ok('comment rules', await page.getByText('留言規則').isVisible())
+ok(
+  'no sample/cron disclaimer',
+  (await page.getByText(/示範故事|由 Grok|cron/i).count()) === 0,
+)
+const heroImg = page.locator('.daily-hero-media')
+await heroImg.waitFor({ state: 'visible', timeout: 15000 })
+ok('daily story hero image', await heroImg.isVisible())
+const heroSrc = await heroImg.getAttribute('src')
+ok('daily hero src', Boolean(heroSrc && (heroSrc.includes('/daily/') || heroSrc.includes('/api/daily/image'))))
+const defaultHero = await page.evaluate(async () => {
+  const res = await fetch('/daily/default-hero.jpg', { method: 'HEAD' })
+  return { ok: res.ok, type: res.headers.get('content-type') || '', len: res.headers.get('content-length') || '' }
+})
+ok('default hero asset', defaultHero.ok, `${defaultHero.type} ${defaultHero.len}`)
 await page.screenshot({ path: `${out}/daily_story.png`, fullPage: true })
+
+await page.getByRole('link', { name: '往日繪卷' }).first().click()
+await page.waitForURL('**/daily/archive')
+ok('archive route', page.url().includes('/daily/archive'))
+ok('archive heading', await page.getByText('往日繪卷').first().isVisible())
+ok('archive date picker', await page.locator('input[type="date"]').first().isVisible())
+await page.screenshot({ path: `${out}/daily_archive.png`, fullPage: true })
+await page.goto(`${base}/daily`, { waitUntil: 'networkidle' })
+
 
 const nick = page.getByPlaceholder('怎麼稱呼你')
 await nick.waitFor({ state: 'visible', timeout: 15000 })

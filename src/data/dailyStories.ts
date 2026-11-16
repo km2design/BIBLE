@@ -23,6 +23,8 @@ export type DailyStory = {
   devotion: string
   prayer: string
   sample?: boolean
+  /** Public URL for the day's illustration (generated or default hero). */
+  imageUrl?: string
 }
 
 const pool: Omit<DailyStory, 'date'>[] = [

@@ -7,11 +7,13 @@
 - **和合本聖經**：完整 66 卷繁體新標點和合本，可自由選舊約／新約書卷 → 章 → 節
   - 來源：eBible.org `cmn-cu89t`（Public Domain），經 midvash/bible-data 整理
   - 署名見閱讀頁與 `public/bible/cuv/SOURCE.md`
-- **每日繪卷**：公仔角色走進日常情境，帶出提醒、警告、勸戒、鼓勵、安慰、同理、名言與反思
+- **每日繪卷**：故事驅動插畫＋角色走進日常情境，帶出提醒、警告、勸戒、鼓勵、安慰、同理、名言與反思
 - **當日靈修**：每篇故事附默想與短禱
+- **往日繪卷**：`/daily/archive` 與日期選擇，重讀已封存故事與其插畫
 - **留言**：可分享反思；細字標明規則（禁止粗口等，違規由版主刪除）
-- **Grok 生成（可自動化）**：設定 `XAI_API_KEY` 後由 Grok 生成當日故事；未設定則使用示範內容
-  - 排程端點：`POST /api/cron/daily-story`（需 `CRON_SECRET`）
+- **Grok 生成（可自動化）**：設定 `XAI_API_KEY` 後由 Grok 生成當日故事與插畫；未設定則示範故事＋預設英雄圖
+  - 排程端點：`POST /api/cron/daily-story`（需 `CRON_SECRET`）— **每天一次**文字＋插畫（約 US$0.04–0.05／圖，不在每次頁面瀏覽觸發）
+  - 插畫：`grok-imagine-image-2.0`，風格參考 `public/daily/default-hero.jpg`，存入 `daily_stories.image_bytes`
   - GitHub Actions：`.github/workflows/daily-story.yml`（香港時間約 00:10）
   - 「今日」依 `Asia/Hong_Kong` 日曆計算
 - **四福音繪卷**：耶穌生平分幕＋經文同步

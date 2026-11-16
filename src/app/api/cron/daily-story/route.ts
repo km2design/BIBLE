@@ -19,12 +19,15 @@ async function handle(request: Request) {
 
   try {
     const result = await ensureTodayStory()
+    const parts: string[] = []
+    if (result.created) parts.push('已生成／寫入今日故事')
+    else parts.push('今日故事已存在，略過重複文字生成')
+    if (result.imageGenerated) parts.push('已生成當日插畫')
+    else parts.push('插畫已存在或略過（無金鑰／失敗則用預設英雄圖）')
     return NextResponse.json({
       ok: true,
       ...result,
-      message: result.created
-        ? '已生成／寫入今日故事'
-        : '今日故事已存在，略過重複生成',
+      message: parts.join('；'),
     })
   } catch {
     return NextResponse.json({ error: '生成失敗' }, { status: 500 })

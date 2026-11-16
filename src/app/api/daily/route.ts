@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { dateKey, withCharacter } from '../../../data/dailyStories'
-import { getDailyStory } from '../../../lib/grokDaily'
+import { getArchivedStory, getDailyStory } from '../../../lib/grokDaily'
 import { clientIp, takeRateLimit } from '../../../lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
 
 export async function GET(request: Request) {
   const ip = clientIp(request)
@@ -14,12 +18,33 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const requested = searchParams.get('date') || dateKey()
-  // Only today is accepted for the public endpoint; blocks date-scanning abuse.
-  const date = requested === dateKey() ? requested : dateKey()
+  const today = dateKey()
 
-  const { story, source } = await getDailyStory(date)
+  if (!isIsoDate(requested)) {
+    return NextResponse.json({ error: '日期格式無效' }, { status: 400 })
+  }
+
+  // Today: public-safe loader (cache or ephemeral sample; never paid gen).
+  if (requested === today) {
+    const { story, source } = await getDailyStory(today)
+    return NextResponse.json({
+      story: withCharacter(story),
+      source: source === 'grok' ? 'grok' : 'sample',
+    })
+  }
+
+  // Past dates: only finished archived rows (no inventing sample days for scanning).
+  if (requested > today) {
+    return NextResponse.json({ error: '尚無未來日期的故事' }, { status: 404 })
+  }
+
+  const archived = await getArchivedStory(requested)
+  if (!archived) {
+    return NextResponse.json({ error: '此日期尚無封存故事' }, { status: 404 })
+  }
+
   return NextResponse.json({
-    story: withCharacter(story),
-    source: source === 'grok' ? 'grok' : 'sample',
+    story: withCharacter(archived.story),
+    source: archived.source === 'grok' ? 'grok' : 'sample',
   })
 }
