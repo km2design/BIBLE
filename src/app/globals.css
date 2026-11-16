@@ -1137,13 +1137,6 @@ button.back-link {
   letter-spacing: 0.08em;
 }
 
-.sample-note {
-  margin-top: 0.85rem;
-  font-size: 0.78rem;
-  color: var(--ink-dim);
-  line-height: 1.5;
-}
-
 .verse-block cite {
   display: block;
   font-style: normal;
