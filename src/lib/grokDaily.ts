@@ -1,5 +1,5 @@
-import { characters } from '../data/characters'
 import {
+  DAILY_ARCHIVE_START,
   dateKey,
   getSampleStoryForDate,
   type DailyStory,
@@ -191,7 +191,6 @@ async function ensureStoryImage(
 }
 
 async function callGrok(date: string, apiKey: string): Promise<DailyStory | null> {
-  const character = characters[Math.abs(hash(date)) % characters.length]
   const res = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -205,11 +204,11 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
         {
           role: 'system',
           content:
-            '你是基督教靈修故事助手。用繁體中文寫短篇。不要直接重述整段福音故事，而是讓3D公仔角色在日常情境中讀經文、得著人生智慧。輸出嚴格 JSON，不要 markdown。',
+            '你是基督教靈修文章助手。用繁體中文寫短篇日常情境故事（第三人稱或場景敘事），帶出經文與人生智慧。不要用公仔／吉祥物／角色名牌作為說話者；不要寫「某某公仔說」。輸出嚴格 JSON，不要 markdown。',
         },
         {
           role: 'user',
-          content: `日期 ${date}。角色：${character.name}（${character.title}，${character.trait}）。請輸出 JSON 欄位：title, story(120-180字), verseRef, verse(和合本風格一句至三句), wisdomKind(必須是 ${KINDS.join('/')} 之一), wisdom(一句), devotionTitle, devotion(兩句反思問題或默想), prayer(一句禱告), characterId("${character.id}")。`,
+          content: `日期 ${date}。請輸出 JSON 欄位：title, story(120-180字，故事驅動、無公仔代言), verseRef, verse(和合本風格一句至三句), wisdomKind(必須是 ${KINDS.join('/')} 之一), wisdom(一句), devotionTitle, devotion(兩句反思問題或默想), prayer(一句禱告), characterId("story")。`,
         },
       ],
     }),
@@ -230,7 +229,7 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
 
   return {
     date,
-    characterId: parsed.characterId || character.id,
+    characterId: parsed.characterId || 'story',
     title: parsed.title || '今日繪卷',
     story: parsed.story || '',
     verseRef: parsed.verseRef || '詩篇 23:1',
@@ -242,12 +241,6 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
     prayer: parsed.prayer || '主啊，求祢引導我的心。阿們。',
     sample: false,
   }
-}
-
-function hash(input: string): number {
-  let h = 0
-  for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) | 0
-  return h
 }
 
 function isIsoDate(value: string): boolean {
@@ -305,9 +298,10 @@ export async function listDailyHistory(limit = 60): Promise<DailyHistoryItem[]> 
               (image_bytes is not null) as has_image
        from daily_stories
        where source in ('grok', 'sample')
+         and story_date >= $2::date
        order by story_date desc
        limit $1`,
-      [capped],
+      [capped, DAILY_ARCHIVE_START],
     )
     const items: DailyHistoryItem[] = []
     for (const row of rows) {

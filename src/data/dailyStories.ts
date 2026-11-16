@@ -1,5 +1,3 @@
-import { characters, type DollCharacter } from './characters'
-
 export type WisdomKind =
   | '反思'
   | '名言'
@@ -32,7 +30,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'xiaoguang',
     title: '小燈還在',
     story:
-      '小光公仔走在雨後的巷弄，看見一盞快熄的路燈。他沒有急著抱怨黑暗，而是蹲下來，讀著口袋裡的經文卡片。風一吹，燈又亮了一點——他忽然明白：有些光，是等人願意靠近才看得見。',
+      '雨後的巷弄裡，一盞路燈忽明忽暗。有人沒有急著抱怨黑暗，而是停下來，讀著口袋裡的經文卡片。風一吹，燈又亮了一點——原來有些光，是等人願意靠近才看得見。',
     verseRef: '馬太福音 5:16',
     verse: '你們的光也當這樣照在人前，叫他們看見你們的好行為，便將榮耀歸給你們在天上的父。',
     wisdomKind: '鼓勵',
@@ -45,7 +43,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'anan',
     title: '停一下也好',
     story:
-      '安安公仔被一堆待辦清單追著跑。他坐在石階上喘气，翻開詩篇，發現「安息」不是偷懶，而是把心交回給那位真正掌權的。他合上清單，先喝了一口水，世界沒有塌下來。',
+      '待辦清單像潮水一樣追上來。有人坐在石階上喘气，翻開詩篇，才發現「安息」不是偷懶，而是把心交回給那位真正掌權的。合上清單，先喝一口水，世界沒有塌下來。',
     verseRef: '馬太福音 11:28',
     verse: '凡勞苦擔重擔的人可以到我這裡來，我就使你們得安息。',
     wisdomKind: '安慰',
@@ -58,7 +56,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'lvren',
     title: '路比想像長',
     story:
-      '旅人公仔以為很快就到山頂，卻在半路遇見泥濘。他差點轉身，卻在泥裡看見別人留下的腳印——原來有人比他更早走過，而且還往前了。他擦擦鞋，繼續走，心裡輕了一點。',
+      '以為很快就到山頂，半路卻遇見泥濘。差點轉身時，泥裡看見別人留下的腳印——原來有人更早走過，而且還往前了。擦擦鞋，繼續走，心裡輕了一點。',
     verseRef: '希伯來書 12:1',
     verse: '我們既有這許多的見證人，如同雲彩圍著我們，就當放下各樣的重擔，脫去容易纏累我們的罪，存心忍耐，奔那擺在我們前頭的路程。',
     wisdomKind: '勸戒',
@@ -71,7 +69,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'shouwang',
     title: '小心腳下',
     story:
-      '守望公仔站在橋邊，看著人潮匆匆。他舉起小小警示牌，不是為了嚇人，而是因為他曾跌過。有人嫌他囉嗦，有人因此放慢腳步。他知道：真心的提醒，不一定立刻被喜歡，卻可能救人一跤。',
+      '橋邊人潮匆匆。有人舉起小小警示牌，不是為了嚇人，而是因為自己曾跌過。有人嫌囉嗦，有人因此放慢腳步。真心的提醒，不一定立刻被喜歡，卻可能救人一跤。',
     verseRef: '箴言 4:23',
     verse: '你要保守你心，勝過保守一切，因為一生的果效是由心發出。',
     wisdomKind: '警告',
@@ -84,7 +82,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'rouxin',
     title: '先坐下聽',
     story:
-      '柔心公仔遇見一位哭紅眼的朋友。他本來想給一堆建議，卻先把茶杯推過去，安靜坐著。後來朋友說：「謝謝你沒有急著修我。」柔心這才懂：同理有時比正確的答案更先需要。',
+      '遇見一位哭紅眼的朋友，本來想給一堆建議，卻先把茶杯推過去，安靜坐著。後來朋友說：「謝謝你沒有急著修我。」原來同理有時比正確的答案更先需要。',
     verseRef: '羅馬書 12:15',
     verse: '與喜樂的人要同樂；與哀哭的人要同哭。',
     wisdomKind: '同理',
@@ -97,7 +95,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'mingyan',
     title: '一句夠用',
     story:
-      '明言公仔喜歡收集句子。今天他只留下一句：「一句真話，勝過十句漂亮空話。」他把它貼在鏡子上，提醒自己說話前先問：這是建立人，還是只是炫耀自己？',
+      '桌上散落許多漂亮句子，最後只留下一句：「一句真話，勝過十句漂亮空話。」把它貼在鏡子上，說話前先問：這是建立人，還是只是炫耀自己？',
     verseRef: '箴言 16:24',
     verse: '良言如同蜂房，使心覺甘甜，使骨得醫治。',
     wisdomKind: '名言',
@@ -110,7 +108,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'xiaoguang',
     title: '失敗以後',
     story:
-      '小光公仔拼模型拼壞了，差點把碎片全丟進垃圾桶。他想起經文說「重新得力」，於是把碎片排好，重新開始。成品不完美，但他學會了：跌倒不是結局，棄賽才是。',
+      '模型拼壞了，差點把碎片全丟進垃圾桶。想起經文說「重新得力」，於是把碎片排好，重新開始。成品不完美，卻學會了：跌倒不是結局，棄賽才是。',
     verseRef: '以賽亞書 40:31',
     verse: '但那等候耶和華的必從新得力。他們必如鷹展翅上騰；他們奔跑卻不困倦，行走卻不疲乏。',
     wisdomKind: '提醒',
@@ -123,7 +121,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
     characterId: 'anan',
     title: '不必假裝強壯',
     story:
-      '安安公仔在大家面前總是微笑，私底下卻很累。他讀到「互相擔當」，才敢跟一位可信的朋友說：「我其實撐不住了。」那一夜，他第一次睡得沉。',
+      '大家面前總是微笑，私底下卻很累。讀到「互相擔當」，才敢跟一位可信的朋友說：「我其實撐不住了。」那一夜，第一次睡得沉。',
     verseRef: '加拉太書 6:2',
     verse: '你們各人的重擔要互相擔當，如此，就完全了基督的律法。',
     wisdomKind: '反思',
@@ -133,6 +131,9 @@ const pool: Omit<DailyStory, 'date'>[] = [
     prayer: '主啊，教我放下偽裝，也賜我可以互相擔當的同伴。阿們。',
   },
 ]
+
+/** First day of the illustrated daily archive (Asia/Hong_Kong). */
+export const DAILY_ARCHIVE_START = '2026-11-16'
 
 /** Calendar date in Asia/Hong_Kong (YYYY-MM-DD). */
 export function dateKey(d = new Date()): string {
@@ -145,11 +146,12 @@ export function dateKey(d = new Date()): string {
 }
 
 export function getSampleStoryForDate(date = dateKey()): DailyStory {
+  // Day one of the archive is pinned to 「一句夠用」; later days rotate the pool.
+  if (date === DAILY_ARCHIVE_START) {
+    const dayOne = pool.find((s) => s.title === '一句夠用') ?? pool[5]
+    return { ...dayOne, date, sample: true }
+  }
   const dayNum = Math.floor(new Date(date + 'T12:00:00').getTime() / 86_400_000)
   const base = pool[((dayNum % pool.length) + pool.length) % pool.length]
   return { ...base, date, sample: true }
-}
-
-export function withCharacter(story: DailyStory): DailyStory & { character: DollCharacter } {
-  return { ...story, character: characters.find((c) => c.id === story.characterId) ?? characters[0] }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { dateKey, withCharacter } from '../../../data/dailyStories'
+import { DAILY_ARCHIVE_START, dateKey } from '../../../data/dailyStories'
 import { getArchivedStory, getDailyStory } from '../../../lib/grokDaily'
 import { clientIp, takeRateLimit } from '../../../lib/rateLimit'
 
@@ -28,14 +28,14 @@ export async function GET(request: Request) {
   if (requested === today) {
     const { story, source } = await getDailyStory(today)
     return NextResponse.json({
-      story: withCharacter(story),
+      story,
       source: source === 'grok' ? 'grok' : 'sample',
     })
   }
 
-  // Past dates: only finished archived rows (no inventing sample days for scanning).
-  if (requested > today) {
-    return NextResponse.json({ error: '尚無未來日期的故事' }, { status: 404 })
+  // Past dates: only finished archived rows from day one onward.
+  if (requested > today || requested < DAILY_ARCHIVE_START) {
+    return NextResponse.json({ error: '此日期尚無封存故事' }, { status: 404 })
   }
 
   const archived = await getArchivedStory(requested)
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
-    story: withCharacter(archived.story),
+    story: archived.story,
     source: archived.source === 'grok' ? 'grok' : 'sample',
   })
 }

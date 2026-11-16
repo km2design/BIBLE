@@ -19,7 +19,7 @@ export default function DevotionPage() {
           ← 光道
         </Link>
         <h1>今日靈修</h1>
-        <p>經文、默想與簡短禱告——給忙碌日子留一點光。也可到「每日」看公仔故事並留言。</p>
+        <p>經文、默想與簡短禱告——給忙碌日子留一點光。也可到「每日」看智慧繪卷並留言。</p>
       </header>
 
       <article className="devotion-card">
@@ -41,7 +41,7 @@ export default function DevotionPage() {
             觀看這卷繪卷
           </Link>
           <Link className="btn ghost" href="/daily">
-            每日公仔故事
+            每日智慧繪卷
           </Link>
         </div>
       </article>

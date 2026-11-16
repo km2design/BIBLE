@@ -5,12 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { AudioControls } from '../../components/AudioControls'
 import { CommentSection } from '../../components/CommentSection'
-import type { DollCharacter } from '../../data/characters'
 import type { DailyStory } from '../../data/dailyStories'
-import { dateKey, getSampleStoryForDate, withCharacter } from '../../data/dailyStories'
+import { DAILY_ARCHIVE_START, dateKey, getSampleStoryForDate } from '../../data/dailyStories'
 import { useAudioSettings } from '../../context/AudioSettings'
-
-type StoryView = DailyStory & { character: DollCharacter }
 
 const DEFAULT_HERO = '/daily/default-hero.jpg'
 
@@ -23,12 +20,10 @@ function DailyClientInner() {
   const viewDate = requested && /^\d{4}-\d{2}-\d{2}$/.test(requested) ? requested : today
   const isToday = viewDate === today
 
-  const [story, setStory] = useState<StoryView>(() =>
-    withCharacter({
-      ...getSampleStoryForDate(viewDate),
-      imageUrl: DEFAULT_HERO,
-    }),
-  )
+  const [story, setStory] = useState<DailyStory>(() => ({
+    ...getSampleStoryForDate(viewDate),
+    imageUrl: DEFAULT_HERO,
+  }))
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
   const [heroLoaded, setHeroLoaded] = useState(false)
@@ -48,7 +43,7 @@ function DailyClientInner() {
           }
           return
         }
-        const data = (await res.json()) as { story: StoryView }
+        const data = (await res.json()) as { story: DailyStory }
         if (!cancelled && data.story) {
           setStory({
             ...data.story,
@@ -101,16 +96,11 @@ function DailyClientInner() {
               <img
                 className="daily-hero-media"
                 src={heroSrc}
-                alt={`${story.title}｜${story.character.name}`}
+                alt={story.title}
                 width={784}
                 height={1168}
                 onLoad={() => setHeroLoaded(true)}
               />
-            </div>
-            <div className="daily-hero-caption">
-              <p className="daily-char-name">{story.character.name}</p>
-              <p className="daily-char-title">{story.character.title}</p>
-              <p className="daily-char-trait">{story.character.trait}</p>
             </div>
           </section>
 
@@ -122,11 +112,12 @@ function DailyClientInner() {
               <span className="sr-only">選擇日期</span>
               <input
                 type="date"
+                min={DAILY_ARCHIVE_START}
                 max={today}
                 value={viewDate}
                 onChange={(e) => {
                   const next = e.target.value
-                  if (!next) return
+                  if (!next || next < DAILY_ARCHIVE_START) return
                   if (next === today) router.push('/daily')
                   else router.push(`/daily?date=${encodeURIComponent(next)}`)
                 }}

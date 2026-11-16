@@ -1,9 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { characters } from '../data/characters'
 import { matthewEpisodes } from '../data/matthew'
-import { DollAvatar } from '../components/DollAvatar'
 
 export default function HomePage() {
   const first = matthewEpisodes[0]
@@ -18,9 +16,9 @@ export default function HomePage() {
         </div>
         <header className="hero-brand">
           <p className="brand-mark">光道</p>
-          <h1 className="brand-tagline">每日公仔智慧</h1>
+          <h1 className="brand-tagline">每日智慧繪卷</h1>
           <p className="brand-lead">
-            3D 公仔角色讀經文，得著反思、名言、提醒、警告、勸戒、鼓勵、安慰與同理；附當日靈修，底下還可留言。
+            每日插畫與短篇故事，帶出反思、名言、提醒、警告、勸戒、鼓勵、安慰與同理；附當日靈修，底下還可留言。
           </p>
           <div className="hero-cta">
             <Link className="btn primary" href="/daily">
@@ -46,16 +44,8 @@ export default function HomePage() {
 
       <section className="home-strip">
         <h2>今日這樣看</h2>
-        <p className="section-lead">公仔讀經 → 人生智慧一句 → 當日靈修反思 → 留言彼此鼓勵（有留言規則）。</p>
-        <div className="doll-row">
-          {characters.slice(0, 4).map((c) => (
-            <Link key={c.id} href="/daily" className="doll-chip">
-              <DollAvatar character={c} size="sm" />
-              <span>{c.name}</span>
-            </Link>
-          ))}
-        </div>
-        <Link className="btn soft" href="/daily" style={{ marginTop: '1.1rem' }}>
+        <p className="section-lead">插畫故事 → 人生智慧一句 → 當日靈修反思 → 留言彼此鼓勵（有留言規則）。</p>
+        <Link className="btn soft" href="/daily" style={{ marginTop: '0.35rem' }}>
           進入每日繪卷
         </Link>
       </section>

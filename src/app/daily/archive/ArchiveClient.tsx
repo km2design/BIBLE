@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { AudioControls } from '../../../components/AudioControls'
-import { dateKey } from '../../../data/dailyStories'
+import { DAILY_ARCHIVE_START, dateKey } from '../../../data/dailyStories'
 
 type HistoryItem = {
   date: string
@@ -56,8 +56,9 @@ export function ArchiveClient() {
           <span>選擇日期</span>
           <input
             type="date"
+            min={DAILY_ARCHIVE_START}
             max={today}
-            value={pick}
+            value={pick < DAILY_ARCHIVE_START ? DAILY_ARCHIVE_START : pick}
             onChange={(e) => setPick(e.target.value || today)}
           />
         </label>

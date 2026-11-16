@@ -18,7 +18,8 @@ await page.goto(base, { waitUntil: 'networkidle' })
 ok('home brand', await page.getByText('光道', { exact: true }).first().isVisible())
 await page.screenshot({ path: `${out}/home_hero.png` })
 
-ok('daily hero', await page.getByRole('heading', { name: '每日公仔智慧' }).isVisible())
+ok('daily hero', await page.getByRole('heading', { name: '每日智慧繪卷' }).isVisible())
+ok('no doll speaker framing', (await page.getByText(/公仔讀經|把智慧說得清楚|箴言公仔/).count()) === 0)
 await page.getByRole('link', { name: '打開今日故事' }).first().click()
 await page.waitForURL('**/daily')
 ok('daily route', page.url().includes('/daily'))
@@ -29,6 +30,23 @@ ok(
   'no sample/cron disclaimer',
   (await page.getByText(/示範故事|由 Grok|cron/i).count()) === 0,
 )
+ok(
+  'no doll speaker on daily',
+  (await page.getByText(/箴言公仔|希望公仔|把智慧說得清楚|明言公仔|小光公仔/).count()) === 0,
+)
+const storyBody = await page.locator('.daily-story').first().innerText()
+ok('story body without 公仔', !storyBody.includes('公仔'), storyBody.slice(0, 40))
+const dailyApi = await page.evaluate(async () => {
+  const res = await fetch('/api/daily')
+  return res.json()
+})
+ok('day-one sample title', dailyApi?.story?.title === '一句夠用', dailyApi?.story?.title)
+const historyApi = await page.evaluate(async () => {
+  const res = await fetch('/api/daily/history')
+  return res.json()
+})
+const early = (historyApi.items || []).filter((i) => i.date < '2026-11-16')
+ok('archive starts at day one', early.length === 0, JSON.stringify(early))
 const heroImg = page.locator('.daily-hero-media')
 await heroImg.waitFor({ state: 'visible', timeout: 15000 })
 ok('daily story hero image', await heroImg.isVisible())
