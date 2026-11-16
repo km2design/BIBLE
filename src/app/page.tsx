@@ -26,11 +26,22 @@ export default function HomePage() {
             <Link className="btn primary" href="/daily">
               打開今日故事
             </Link>
-            <Link className="btn ghost" href={`/watch/${first.id}`}>
-              看馬太福音
+            <Link className="btn ghost" href="/bible">
+              讀和合本
             </Link>
           </div>
         </header>
+      </section>
+
+      <section className="home-strip">
+        <h2>和合本聖經</h2>
+        <p className="section-lead">完整 66 卷公眾領域和合本，自由選書、章、節閱讀。</p>
+        <Link className="btn soft" href="/bible">
+          打開聖經
+        </Link>
+        <Link className="text-link" href={`/watch/${first.id}`} style={{ display: 'block', marginTop: '0.85rem' }}>
+          或看馬太福音繪卷 →
+        </Link>
       </section>
 
       <section className="home-strip">

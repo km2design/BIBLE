@@ -7,8 +7,8 @@ import '@fontsource/noto-serif-tc/latin-700.css'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '光道 · 四福音繪卷',
-  description: '公仔角色讀經得智慧：每日故事、靈修反思與溫柔留言。',
+  title: '光道 · 和合本與每日智慧',
+  description: '和合本聖經自由讀經、公仔每日智慧、馬太繪卷與靈修留言。',
 }
 
 export const viewport: Viewport = {

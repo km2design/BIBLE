@@ -19,9 +19,9 @@ export function BottomNav() {
   return (
     <nav className="bottom-nav" aria-label="主要導覽">
       {item('/', '首頁', true)}
-      {item('/matthew', '馬太')}
+      {item('/bible', '聖經')}
       {item('/daily', '每日')}
-      {item('/devotion', '靈修')}
+      {item('/matthew', '馬太')}
     </nav>
   )
 }
