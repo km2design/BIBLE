@@ -229,18 +229,23 @@ ok('comment posted', await page.getByText('今天被安慰到了').first().isVis
 await page.screenshot({ path: `${out}/daily_comments.png`, fullPage: true })
 
 await page.goto(`${base}/matthew`, { waitUntil: 'networkidle' })
-ok('matthew catalog', await page.getByRole('heading', { name: '馬太福音繪卷' }).isVisible())
-await page.getByRole('link', { name: /從「/ }).click()
-await page.waitForURL('**/watch/mt-magi')
-ok('matthew start', page.url().includes('/watch/mt-magi'))
-ok('matthew title', await page.getByText('博士來朝').first().isVisible())
-await page.screenshot({ path: `${out}/matthew_watch.png` })
+ok('matthew redirects to chaji', page.url().includes('/chaji'))
+ok('chaji catalog', await page.getByRole('heading', { name: '茶記大作戰' }).first().isVisible())
+ok('chaji intro', await page.getByText(/林小悠帶著兩隻貓/).isVisible())
+ok('chaji series a', await page.getByText('減肥大作戰').first().isVisible())
+ok('chaji series b', await page.getByText('時空之門').first().isVisible())
+await page.screenshot({ path: `${out}/chaji_catalog.png`, fullPage: true })
+
+await page.getByRole('link', { name: /減肥大作戰/ }).first().click()
+await page.waitForURL('**/chaji/chaji-ep1-diet')
+ok('chaji episode', page.url().includes('/chaji/chaji-ep1-diet'))
+ok('chaji episode title', await page.getByRole('heading', { name: '減肥大作戰' }).isVisible())
+await page.screenshot({ path: `${out}/chaji_ep1.png`, fullPage: true })
 
 await page.goto(`${base}/watch/mt-baptism`, { waitUntil: 'networkidle' })
-ok('watch route', page.url().includes('/watch/mt-baptism'))
-await page.getByRole('tab', { name: '經文' }).click()
-ok('verse tab', await page.getByText('天國近了，你們應當悔改').isVisible())
+ok('watch redirects to chaji', page.url().includes('/chaji'))
 
+await page.goto(`${base}/daily`, { waitUntil: 'networkidle' })
 const music = page.getByRole('button', { name: /音效/ })
 await music.click()
 ok('music off', await music.getByText('關').isVisible())
@@ -281,9 +286,15 @@ ok('bgm mp3 served', bgmStatus.ok, bgmStatus.type)
 
 await page.goto(`${base}/library`, { waitUntil: 'networkidle' })
 ok('library', await page.getByRole('heading', { name: '繪卷目錄' }).isVisible())
+ok('library chaji', await page.getByText('茶記大作戰').first().isVisible())
 
 await page.goto(`${base}/devotion`, { waitUntil: 'networkidle' })
 ok('devotion page', await page.getByRole('heading', { name: '今日靈修' }).isVisible())
+
+await page.goto(base, { waitUntil: 'networkidle' })
+ok('home chaji logo', await page.locator('.brand-chaji-logo').isVisible())
+ok('nav chaji', await page.getByRole('navigation').getByRole('link', { name: '茶記' }).isVisible())
+await page.screenshot({ path: `${out}/home_with_chaji.png` })
 
 await page.goto(`${base}/bible`, { waitUntil: 'networkidle' })
 ok('bible catalog', await page.getByRole('heading', { name: '和合本聖經' }).isVisible())

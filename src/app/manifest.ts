@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: '光道',
     short_name: '光道',
-    description: '和合本聖經自由讀經、每日智慧繪卷、馬太繪卷與靈修留言。',
+    description: '和合本聖經自由讀經、每日智慧繪卷、茶記大作戰與靈修留言。',
     start_url: '/',
     scope: '/',
     display: 'standalone',

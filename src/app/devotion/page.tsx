@@ -1,16 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { episodes } from '../../data/episodes'
+import { chajiEpisodes } from '../../data/chaji'
 
 function pickDaily() {
   const day = Math.floor(Date.now() / 86_400_000)
-  return episodes[day % episodes.length]
+  return chajiEpisodes[day % chajiEpisodes.length]
 }
 
 export default function DevotionPage() {
   const ep = pickDaily()
-  const scene = ep.scenes[ep.scenes.length - 1]
 
   return (
     <main className="page devotion-page">
@@ -24,21 +23,17 @@ export default function DevotionPage() {
 
       <article className="devotion-card">
         <p className="devotion-meta">
-          {ep.gospelLabel} · {ep.title}
+          {ep.seriesTitle} · EP.{ep.ep}
         </p>
-        <h2>{ep.devotion.title}</h2>
-        <blockquote>
-          <p>{scene.verse}</p>
-          <cite>{scene.verseRef}</cite>
-        </blockquote>
-        <p className="devotion-body">{ep.devotion.body}</p>
+        <h2>{ep.title}</h2>
+        <p className="devotion-body">{ep.blurb}</p>
         <div className="prayer-box">
           <h3>簡短禱告</h3>
-          <p>{ep.devotion.prayer}</p>
+          <p>主啊，謝謝祢賜下日常裡的溫暖與陪伴，求祢教導我珍惜眼前的人與恩典。阿們。</p>
         </div>
         <div className="hero-cta">
-          <Link className="btn primary" href={`/watch/${ep.id}`}>
-            觀看這卷繪卷
+          <Link className="btn primary" href={`/chaji/${ep.id}`}>
+            打開這一集
           </Link>
           <Link className="btn ghost" href="/daily">
             每日智慧繪卷

@@ -8,7 +8,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: '光道 · 和合本與每日智慧',
-  description: '和合本聖經自由讀經、每日智慧繪卷、馬太繪卷與靈修留言。',
+  description: '和合本聖經自由讀經、每日智慧繪卷、茶記大作戰與靈修留言。',
   applicationName: '光道',
   appleWebApp: {
     capable: true,

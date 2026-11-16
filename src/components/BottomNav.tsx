@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation'
 
 export function BottomNav() {
   const pathname = usePathname()
-  if (pathname.startsWith('/watch') || pathname.startsWith('/settings')) return null
+  if (pathname.startsWith('/watch') || pathname.startsWith('/settings') || pathname.startsWith('/admin')) {
+    return null
+  }
 
   const item = (href: string, label: string, exact = false) => {
     const active = exact ? pathname === href : pathname.startsWith(href)
@@ -21,7 +23,7 @@ export function BottomNav() {
       {item('/', '首頁', true)}
       {item('/bible', '聖經')}
       {item('/daily', '每日')}
-      {item('/matthew', '馬太')}
+      {item('/chaji', '茶記')}
     </nav>
   )
 }
