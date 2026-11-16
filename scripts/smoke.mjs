@@ -61,6 +61,25 @@ await page.waitForURL('**/settings')
 ok('settings page', await page.getByRole('heading', { name: '音效設定' }).isVisible())
 await page.getByRole('button', { name: '海邊' }).click()
 ok('nature sea', await page.locator('.choice-chip.active', { hasText: '海邊' }).isVisible())
+const natureStatus = await page.evaluate(async () => {
+  const res = await fetch('/audio/nature/sea.mp3', { method: 'HEAD' })
+  return { ok: res.ok, type: res.headers.get('content-type') || '', len: res.headers.get('content-length') || '' }
+})
+ok('nature mp3 served', natureStatus.ok, `${natureStatus.type} ${natureStatus.len}`)
+const naturePlay = await page.evaluate(async () => {
+  const audio = new Audio('/audio/nature/rain.mp3')
+  audio.loop = true
+  try {
+    await audio.play()
+    await new Promise((r) => setTimeout(r, 400))
+    const ok = !audio.paused && audio.currentTime > 0
+    audio.pause()
+    return { ok, time: audio.currentTime }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+})
+ok('nature mp3 plays', naturePlay.ok, JSON.stringify(naturePlay))
 await page.getByRole('button', { name: '寧靜湖' }).click()
 ok('bgm lake', await page.locator('.choice-chip.active', { hasText: '寧靜湖' }).isVisible())
 const bgmStatus = await page.evaluate(async () => {

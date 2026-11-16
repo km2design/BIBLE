@@ -12,15 +12,13 @@ export type BgmId =
 
 export type NatureId =
   | 'none'
-  | 'wind'
-  | 'birds'
-  | 'drops'
-  | 'forest'
-  | 'sea'
   | 'rain'
+  | 'forest'
+  | 'birds'
   | 'stream'
+  | 'sea'
+  | 'wind'
   | 'night'
-  | 'meadow'
 
 export type BgmPreset = {
   id: BgmId
@@ -33,6 +31,7 @@ export type NaturePreset = {
   id: NatureId
   label: string
   desc: string
+  src?: string
 }
 
 export const bgmPresets: BgmPreset[] = [
@@ -50,16 +49,26 @@ export const bgmPresets: BgmPreset[] = [
 
 export const naturePresets: NaturePreset[] = [
   { id: 'none', label: '無', desc: '關閉環境聲' },
-  { id: 'wind', label: '風', desc: '輕柔風聲' },
-  { id: 'birds', label: '鳥', desc: '遠處鳥鳴' },
-  { id: 'drops', label: '水滴', desc: '緩慢水滴' },
-  { id: 'forest', label: '森林', desc: '林間風與鳥' },
-  { id: 'sea', label: '海邊', desc: '潮汐浪聲' },
-  { id: 'rain', label: '雨', desc: '細雨沙沙' },
-  { id: 'stream', label: '溪流', desc: '潺潺流水' },
-  { id: 'night', label: '夜蟲', desc: '夜間蟲鳴' },
-  { id: 'meadow', label: '草地', desc: '開闊草原風' },
+  { id: 'rain', label: '雨', desc: '細雨沙沙', src: '/audio/nature/rain.mp3' },
+  { id: 'forest', label: '森林', desc: '林間氛圍', src: '/audio/nature/forest.mp3' },
+  { id: 'birds', label: '鳥', desc: '公園鳥鳴', src: '/audio/nature/birds.mp3' },
+  { id: 'stream', label: '溪流', desc: '流水潺潺', src: '/audio/nature/stream.mp3' },
+  { id: 'sea', label: '海邊', desc: '潮汐浪聲', src: '/audio/nature/sea.mp3' },
+  { id: 'wind', label: '風', desc: '輕柔風聲', src: '/audio/nature/wind.mp3' },
+  { id: 'night', label: '夜蟲', desc: '蟋蟀蟲鳴', src: '/audio/nature/night.mp3' },
 ]
 
 export const DEFAULT_BGM: BgmId = 'dawn'
 export const DEFAULT_NATURE: NatureId = 'none'
+
+/** Map legacy synthetic IDs saved in localStorage to current presets. */
+export function normalizeNatureId(id: string | undefined | null): NatureId {
+  const valid = new Set(naturePresets.map((p) => p.id))
+  if (id && valid.has(id as NatureId)) return id as NatureId
+  const legacy: Record<string, NatureId> = {
+    drops: 'stream',
+    meadow: 'birds',
+  }
+  if (id && legacy[id]) return legacy[id]
+  return DEFAULT_NATURE
+}

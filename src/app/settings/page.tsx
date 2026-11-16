@@ -63,7 +63,7 @@ export default function SettingsPage() {
           ← 返回
         </button>
         <h1>音效設定</h1>
-        <p>選擇柔和背景音樂、動畫音效與大自然環境聲，並分別調整音量。</p>
+        <p>選擇柔和背景音樂、動畫音效，以及可循環的真實大自然環境錄音。</p>
       </header>
 
       <section className="settings-block">
@@ -124,6 +124,7 @@ export default function SettingsPage() {
           <h2>環境聲 · 大自然</h2>
           <Toggle checked={audio.natureOn} onChange={audio.setNatureOn} label="環境" />
         </div>
+        <p className="settings-hint">雨、森林、鳥鳴、溪流、海邊、風與夜蟲，皆為 CC0 真實錄音循環。</p>
         <VolumeRow
           label="音量"
           value={audio.natureVolume}

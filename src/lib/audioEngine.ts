@@ -1,17 +1,7 @@
-import { bgmPresets, type BgmId, type NatureId } from '../data/audioPresets'
-
-type Stoppable = { stop: () => void }
+import { bgmPresets, naturePresets, type BgmId, type NatureId } from '../data/audioPresets'
 
 function getAC(): typeof AudioContext {
   return window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-}
-
-function makeNoiseBuffer(ctx: AudioContext, seconds = 2) {
-  const len = Math.floor(ctx.sampleRate * seconds)
-  const buffer = ctx.createBuffer(1, len, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
-  return buffer
 }
 
 export type AudioEngine = {
@@ -41,12 +31,12 @@ export function createAudioEngine(): AudioEngine {
   let bgmId: BgmId = 'dawn'
   let natureId: NatureId = 'none'
   let activeBgmId: BgmId | null = null
+  let activeNatureId: NatureId | null = null
 
   const bgmElements = new Map<BgmId, HTMLAudioElement>()
   const bgmConnected = new Set<BgmId>()
-
-  let natureStops: Stoppable[] = []
-  let natureTimers: number[] = []
+  const natureElements = new Map<NatureId, HTMLAudioElement>()
+  const natureConnected = new Set<NatureId>()
 
   function ensure() {
     if (ctx) return
@@ -88,6 +78,26 @@ export function createAudioEngine(): AudioEngine {
     return el
   }
 
+  function getNatureElement(id: NatureId) {
+    ensure()
+    if (id === 'none') return null
+    let el = natureElements.get(id)
+    if (!el) {
+      const preset = naturePresets.find((p) => p.id === id)
+      if (!preset?.src) return null
+      el = new Audio(preset.src)
+      el.loop = true
+      el.preload = 'metadata'
+      natureElements.set(id, el)
+    }
+    if (ctx && natureBus && !natureConnected.has(id)) {
+      const src = ctx.createMediaElementSource(el)
+      src.connect(natureBus)
+      natureConnected.add(id)
+    }
+    return el
+  }
+
   function clearBgm() {
     bgmElements.forEach((el) => {
       el.pause()
@@ -96,10 +106,10 @@ export function createAudioEngine(): AudioEngine {
   }
 
   function clearNature() {
-    natureTimers.forEach((t) => window.clearTimeout(t))
-    natureTimers = []
-    natureStops.forEach((s) => s.stop())
-    natureStops = []
+    natureElements.forEach((el) => {
+      el.pause()
+    })
+    activeNatureId = null
   }
 
   function applyBusGains() {
@@ -126,8 +136,7 @@ export function createAudioEngine(): AudioEngine {
     void ctx.resume()
 
     if (activeBgmId && activeBgmId !== id) {
-      const prev = bgmElements.get(activeBgmId)
-      prev?.pause()
+      bgmElements.get(activeBgmId)?.pause()
     }
 
     const el = getBgmElement(id)
@@ -144,154 +153,34 @@ export function createAudioEngine(): AudioEngine {
     })
   }
 
-  function schedule(fn: () => void, ms: number) {
-    const timerId = window.setTimeout(fn, ms)
-    natureTimers.push(timerId)
-    return timerId
-  }
-
-  function startNoisePad(filterFreq: number, q: number, gainVal: number, lfoRate: number) {
-    if (!ctx || !natureBus) return
-    const src = ctx.createBufferSource()
-    src.buffer = makeNoiseBuffer(ctx, 3)
-    src.loop = true
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'bandpass'
-    filter.frequency.value = filterFreq
-    filter.Q.value = q
-    const gain = ctx.createGain()
-    gain.gain.value = gainVal
-    const lfo = ctx.createOscillator()
-    const lfoGain = ctx.createGain()
-    lfo.frequency.value = lfoRate
-    lfoGain.gain.value = filterFreq * 0.25
-    lfo.connect(lfoGain)
-    lfoGain.connect(filter.frequency)
-    src.connect(filter)
-    filter.connect(gain)
-    gain.connect(natureBus)
-    src.start()
-    lfo.start()
-    natureStops.push({
-      stop: () => {
-        try {
-          src.stop()
-          lfo.stop()
-        } catch {
-          /* */
-        }
-      },
-    })
-  }
-
-  function chirpBurst() {
-    if (!ctx || !natureBus) return
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    const now = ctx.currentTime
-    const f0 = 1800 + Math.random() * 1400
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(f0, now)
-    osc.frequency.exponentialRampToValueAtTime(f0 * (0.6 + Math.random() * 0.5), now + 0.12)
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14)
-    osc.connect(gain)
-    gain.connect(natureBus)
-    osc.start(now)
-    osc.stop(now + 0.16)
-  }
-
-  function drip() {
-    if (!ctx || !natureBus) return
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    const filter = ctx.createBiquadFilter()
-    const now = ctx.currentTime
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(900 + Math.random() * 500, now)
-    osc.frequency.exponentialRampToValueAtTime(180, now + 0.25)
-    filter.type = 'lowpass'
-    filter.frequency.value = 1200
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3)
-    osc.connect(filter)
-    filter.connect(gain)
-    gain.connect(natureBus)
-    osc.start(now)
-    osc.stop(now + 0.32)
-  }
-
-  function cricket() {
-    if (!ctx || !natureBus) return
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    const now = ctx.currentTime
-    osc.type = 'square'
-    osc.frequency.value = 4200 + Math.random() * 800
-    gain.gain.setValueAtTime(0.0001, now)
-    for (let i = 0; i < 4; i++) {
-      const t = now + i * 0.045
-      gain.gain.exponentialRampToValueAtTime(0.03, t + 0.005)
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03)
-    }
-    osc.connect(gain)
-    gain.connect(natureBus)
-    osc.start(now)
-    osc.stop(now + 0.25)
-  }
-
-  function loopRandom(fn: () => void, minMs: number, maxMs: number) {
-    const tick = () => {
-      fn()
-      schedule(tick, minMs + Math.random() * (maxMs - minMs))
-    }
-    schedule(tick, minMs * 0.4)
-  }
-
   function startNature(id: NatureId) {
     ensure()
-    clearNature()
-    if (!ctx || !natureBus || id === 'none') return
-
-    switch (id) {
-      case 'wind':
-        startNoisePad(420, 0.7, 0.055, 0.07)
-        break
-      case 'birds':
-        startNoisePad(280, 0.5, 0.012, 0.04)
-        loopRandom(chirpBurst, 1800, 5200)
-        break
-      case 'drops':
-        loopRandom(drip, 900, 2800)
-        break
-      case 'forest':
-        startNoisePad(380, 0.8, 0.04, 0.05)
-        loopRandom(chirpBurst, 2200, 6000)
-        break
-      case 'sea':
-        startNoisePad(180, 0.55, 0.07, 0.08)
-        startNoisePad(90, 0.4, 0.04, 0.03)
-        break
-      case 'rain':
-        startNoisePad(2200, 0.35, 0.045, 0.2)
-        startNoisePad(900, 0.5, 0.03, 0.12)
-        break
-      case 'stream':
-        startNoisePad(1100, 0.6, 0.04, 0.25)
-        startNoisePad(500, 0.7, 0.03, 0.1)
-        loopRandom(drip, 1400, 3600)
-        break
-      case 'night':
-        startNoisePad(200, 0.5, 0.015, 0.03)
-        loopRandom(cricket, 700, 2200)
-        break
-      case 'meadow':
-        startNoisePad(500, 0.65, 0.035, 0.06)
-        loopRandom(chirpBurst, 2500, 7000)
-        break
+    if (!ctx || !natureBus || id === 'none') {
+      clearNature()
+      return
     }
+    void ctx.resume()
+
+    if (activeNatureId && activeNatureId !== id) {
+      natureElements.get(activeNatureId)?.pause()
+    }
+
+    const el = getNatureElement(id)
+    if (!el) {
+      clearNature()
+      return
+    }
+    if (activeNatureId !== id) {
+      try {
+        el.currentTime = 0
+      } catch {
+        /* ignore */
+      }
+    }
+    activeNatureId = id
+    void el.play().catch(() => {
+      /* autoplay may fail until user gesture */
+    })
   }
 
   function playSfx(kind: 'scene' | 'tap' | 'devotion') {
@@ -387,9 +276,10 @@ export function createAudioEngine(): AudioEngine {
       natureId = id
       natureEnabled = enabled
       natureVol = Math.max(0, Math.min(1, volume))
-      if (changed) {
-        if (enabled && masterOn && id !== 'none') startNature(id)
-        else clearNature()
+      if (!enabled || !masterOn || id === 'none') {
+        clearNature()
+      } else if (changed || activeNatureId !== id) {
+        startNature(id)
       }
       applyBusGains()
     },
@@ -405,8 +295,13 @@ export function createAudioEngine(): AudioEngine {
       bgmElements.forEach((el) => {
         el.src = ''
       })
+      natureElements.forEach((el) => {
+        el.src = ''
+      })
       bgmElements.clear()
+      natureElements.clear()
       bgmConnected.clear()
+      natureConnected.clear()
       void ctx?.close()
       ctx = null
     },

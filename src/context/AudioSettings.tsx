@@ -11,6 +11,7 @@ import {
 import {
   DEFAULT_BGM,
   DEFAULT_NATURE,
+  normalizeNatureId,
   type BgmId,
   type NatureId,
 } from '../data/audioPresets'
@@ -61,7 +62,10 @@ function load(): AudioSettingsState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaults
-    return { ...defaults, ...JSON.parse(raw) }
+    const parsed = { ...defaults, ...JSON.parse(raw) } as AudioSettingsState
+    parsed.natureId = normalizeNatureId(parsed.natureId)
+    if (parsed.natureId === 'none') parsed.natureOn = false
+    return parsed
   } catch {
     return defaults
   }
