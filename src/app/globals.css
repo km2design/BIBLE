@@ -128,6 +128,75 @@ p {
   letter-spacing: 0.03em;
 }
 
+/* —— PWA install affordance —— */
+.install-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(72px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(448px, calc(100% - 1.5rem));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  background: linear-gradient(160deg, rgba(26, 42, 52, 0.96), rgba(7, 16, 23, 0.96));
+  border: 1px solid rgba(212, 165, 116, 0.28);
+  border-radius: 0.85rem;
+  z-index: 45;
+  animation: install-in 0.35s ease both;
+}
+
+@keyframes install-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.install-prompt-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.install-prompt-copy strong {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  color: var(--gold-soft);
+  font-size: 0.95rem;
+}
+
+.install-prompt-copy span {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.install-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.install-btn {
+  min-height: 40px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.install-dismiss {
+  color: var(--ink-dim);
+  font-size: 0.82rem;
+  padding: 0.35rem 0.45rem;
+}
+
 /* —— Bottom nav —— */
 .bottom-nav {
   position: fixed;

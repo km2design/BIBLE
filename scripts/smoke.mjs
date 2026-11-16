@@ -18,6 +18,67 @@ await page.goto(base, { waitUntil: 'networkidle' })
 ok('home brand', await page.getByText('光道', { exact: true }).first().isVisible())
 await page.screenshot({ path: `${out}/home_hero.png` })
 
+const manifest = await page.evaluate(async () => {
+  const link = document.querySelector('link[rel="manifest"]')
+  const href = link?.getAttribute('href') || '/manifest.webmanifest'
+  const res = await fetch(href)
+  const json = await res.json()
+  return {
+    ok: res.ok,
+    href,
+    name: json.name,
+    display: json.display,
+    start_url: json.start_url,
+    theme_color: json.theme_color,
+    icons: (json.icons || []).map((i) => i.src),
+  }
+})
+ok('manifest linked', Boolean(manifest.href), manifest.href)
+ok('manifest ok', manifest.ok)
+ok('manifest name', manifest.name === '光道', manifest.name)
+ok('manifest standalone', manifest.display === 'standalone', manifest.display)
+ok('manifest start', manifest.start_url === '/' || manifest.start_url === './', String(manifest.start_url))
+ok('manifest theme', manifest.theme_color === '#0c1a24', String(manifest.theme_color))
+ok('manifest icons', manifest.icons.some((s) => s.includes('192')) && manifest.icons.some((s) => s.includes('512')))
+
+for (const path of ['/icons/icon-192.png', '/icons/icon-512.png', '/apple-touch-icon.png']) {
+  const icon = await page.evaluate(async (p) => {
+    const res = await fetch(p, { method: 'HEAD' })
+    return { ok: res.ok, type: res.headers.get('content-type') || '', path: p }
+  }, path)
+  ok(`icon ${path}`, icon.ok && icon.type.includes('image'), `${icon.type}`)
+}
+
+const sw = await page.evaluate(async () => {
+  const res = await fetch('/sw.js')
+  const text = await res.text()
+  return {
+    ok: res.ok,
+    type: res.headers.get('content-type') || '',
+    skipsApi: text.includes('/api/'),
+    hasCache: text.includes('guangdao-shell'),
+  }
+})
+ok('service worker script', sw.ok, sw.type)
+ok('sw skips api', sw.skipsApi)
+ok('sw cache name', sw.hasCache)
+
+const swReg = await page.evaluate(async () => {
+  if (!('serviceWorker' in navigator)) return { supported: false }
+  const reg = await navigator.serviceWorker.getRegistration()
+  // registration is async after load; wait briefly if needed
+  if (reg) return { supported: true, active: Boolean(reg.active || reg.installing || reg.waiting), scope: reg.scope }
+  await new Promise((r) => setTimeout(r, 1500))
+  const again = await navigator.serviceWorker.getRegistration()
+  return {
+    supported: true,
+    active: Boolean(again?.active || again?.installing || again?.waiting),
+    scope: again?.scope || '',
+  }
+})
+ok('sw supported', swReg.supported !== false)
+ok('sw registered', swReg.active, JSON.stringify(swReg))
+
 ok('daily hero', await page.getByRole('heading', { name: '每日智慧繪卷' }).isVisible())
 ok('no doll speaker framing', (await page.getByText(/公仔讀經|把智慧說得清楚|箴言公仔/).count()) === 0)
 await page.getByRole('link', { name: '打開今日故事' }).first().click()
