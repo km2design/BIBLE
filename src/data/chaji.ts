@@ -9,6 +9,8 @@ export type ChajiEpisode = {
   subtitle: string
   cover: string
   blurb: string
+  /** YouTube Shorts video id */
+  youtubeId: string
 }
 
 export const CHAJI_INTRO =
@@ -36,6 +38,7 @@ export const chajiEpisodes: ChajiEpisode[] = [
     title: '減肥大作戰',
     subtitle: '第一集',
     cover: '/chaji/ep1-diet.jpg',
+    youtubeId: 'EQKGmYfDg7U',
     blurb: '茶記裡的美食香氣太誘人，減肥計劃會不會一開場就破功？肥仔 Oreo 與咪咪 Mochi 陪林小悠一起面對餐牌的考驗。',
   },
   {
@@ -46,6 +49,7 @@ export const chajiEpisodes: ChajiEpisode[] = [
     title: '街市大冒險',
     subtitle: '第二集',
     cover: '/chaji/ep2-market.jpg',
+    youtubeId: 'EUt6jjXTXSo',
     blurb: '走到街市買餸，人聲、攤檔與驚喜處處。兩隻貓與主人展開一場熱鬧的街頭小冒險。',
   },
   {
@@ -56,6 +60,7 @@ export const chajiEpisodes: ChajiEpisode[] = [
     title: '公園野餐記',
     subtitle: '第三集',
     cover: '/chaji/ep3-picnic.jpg',
+    youtubeId: 'GyNPqNCwsAU',
     blurb: '把茶記味道帶到公園草地，陽光、便當與陪伴，寫下一頁溫柔的野餐時光。',
   },
   {
@@ -66,6 +71,7 @@ export const chajiEpisodes: ChajiEpisode[] = [
     title: '時空之門',
     subtitle: '第一集',
     cover: '/chaji/gospel-ep1-portal.jpg',
+    youtubeId: 'L7hNZsI2Z3Y',
     blurb: '一道意外開啟的時空之門，把茶記日常與福音旅程接上——冒險才剛開始。',
   },
 ]
@@ -85,4 +91,8 @@ export function nextChajiEpisode(id: string): ChajiEpisode | undefined {
   const i = list.findIndex((e) => e.id === id)
   if (i < 0 || i >= list.length - 1) return undefined
   return list[i + 1]
+}
+
+export function chajiWatchUrl(ep: ChajiEpisode): string {
+  return `https://www.youtube.com/shorts/${ep.youtubeId}`
 }

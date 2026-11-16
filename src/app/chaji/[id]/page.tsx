@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getChajiEpisode, nextChajiEpisode } from '../../../data/chaji'
+import { ChajiShortPlayer } from '../../../components/ChajiShortPlayer'
+import { chajiWatchUrl, getChajiEpisode, nextChajiEpisode } from '../../../data/chaji'
 
 export default async function ChajiEpisodePage({
   params,
@@ -32,6 +33,8 @@ export default async function ChajiEpisodePage({
         <img src={ep.cover} alt={`${ep.seriesTitle} ${ep.subtitle} ${ep.title}`} width={1200} height={1200} />
       </section>
 
+      <ChajiShortPlayer videoId={ep.youtubeId} title={ep.title} />
+
       <section className="daily-block">
         <p className="devotion-meta">
           {ep.subtitle} · {ep.seriesTitle}
@@ -39,18 +42,18 @@ export default async function ChajiEpisodePage({
         <h1>{ep.title}</h1>
         <p className="daily-story">{ep.blurb}</p>
         <div className="hero-cta" style={{ marginTop: '1.25rem' }}>
+          <a className="btn primary" href={chajiWatchUrl(ep)} target="_blank" rel="noopener noreferrer">
+            觀看本集 Short
+          </a>
           {next ? (
-            <Link className="btn primary" href={`/chaji/${next.id}`}>
+            <Link className="btn ghost" href={`/chaji/${next.id}`}>
               下一集 · {next.title}
             </Link>
           ) : (
-            <Link className="btn primary" href="/chaji">
+            <Link className="btn ghost" href="/chaji">
               回到茶記目錄
             </Link>
           )}
-          <Link className="btn ghost" href="/daily">
-            每日繪卷
-          </Link>
         </div>
       </section>
     </main>

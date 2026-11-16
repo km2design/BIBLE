@@ -173,7 +173,10 @@ const dailyApi = await page.evaluate(async () => {
   const res = await fetch('/api/daily')
   return res.json()
 })
-ok('day-one sample title', dailyApi?.story?.title === '一句夠用', dailyApi?.story?.title)
+ok('daily story title', Boolean(dailyApi?.story?.title), String(dailyApi?.story?.title || ''))
+if (dailyApi?.story?.date === '2026-11-16') {
+  ok('day-one sample title', dailyApi.story.title === '一句夠用', dailyApi.story.title)
+}
 const historyApi = await page.evaluate(async () => {
   const res = await fetch('/api/daily/history')
   return res.json()
@@ -234,13 +237,31 @@ ok('chaji catalog', await page.getByRole('heading', { name: '茶記大作戰' })
 ok('chaji intro', await page.getByText(/林小悠帶著兩隻貓/).isVisible())
 ok('chaji series a', await page.getByText('減肥大作戰').first().isVisible())
 ok('chaji series b', await page.getByText('時空之門').first().isVisible())
+ok('chaji catalog watch cue', await page.getByText('觀看 Short').first().isVisible())
 await page.screenshot({ path: `${out}/chaji_catalog.png`, fullPage: true })
 
 await page.getByRole('link', { name: /減肥大作戰/ }).first().click()
 await page.waitForURL('**/chaji/chaji-ep1-diet')
 ok('chaji episode', page.url().includes('/chaji/chaji-ep1-diet'))
 ok('chaji episode title', await page.getByRole('heading', { name: '減肥大作戰' }).isVisible())
+ok('chaji cover kept', await page.locator('.chaji-hero img').isVisible())
+const shortIframe = page.locator('.chaji-short-frame iframe')
+ok('chaji short embed', await shortIframe.isVisible())
+const embedSrc = (await shortIframe.getAttribute('src')) || ''
+ok('chaji short video id', embedSrc.includes('EQKGmYfDg7U'), embedSrc)
+ok(
+  'chaji youtube fallback',
+  await page.getByRole('link', { name: /在 YouTube 開啟/ }).isVisible(),
+)
+const watchHref = await page.getByRole('link', { name: '觀看本集 Short' }).getAttribute('href')
+ok('chaji watch link', watchHref === 'https://www.youtube.com/shorts/EQKGmYfDg7U', String(watchHref))
 await page.screenshot({ path: `${out}/chaji_ep1.png`, fullPage: true })
+
+await page.goto(`${base}/chaji/chaji-gospel-ep1-portal`, { waitUntil: 'networkidle' })
+ok('chaji gospel episode', page.url().includes('/chaji/chaji-gospel-ep1-portal'))
+const gospelSrc = (await page.locator('.chaji-short-frame iframe').getAttribute('src')) || ''
+ok('chaji gospel short id', gospelSrc.includes('L7hNZsI2Z3Y'), gospelSrc)
+await page.screenshot({ path: `${out}/chaji_gospel_ep1.png`, fullPage: true })
 
 await page.goto(`${base}/watch/mt-baptism`, { waitUntil: 'networkidle' })
 ok('watch redirects to chaji', page.url().includes('/chaji'))

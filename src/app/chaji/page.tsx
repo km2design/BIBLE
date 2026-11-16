@@ -37,6 +37,7 @@ export default function ChajiPage() {
                         EP.{ep.ep} · {ep.subtitle}
                       </span>
                       <strong>{ep.title}</strong>
+                      <em className="chaji-card-watch">觀看 Short</em>
                     </div>
                   </Link>
                 </li>
