@@ -10,6 +10,7 @@ export type AdminAppSettings = {
 }
 
 export const DEFAULT_ADMIN_SETTINGS: AdminAppSettings = {
+  /** Live cutover forces Mode B via migration 007 + syncPublicFromApproved. */
   publishMode: 'open',
   autoGenImage: false,
 }

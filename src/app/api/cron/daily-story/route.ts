@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { ensureTodayStory } from '../../../../lib/grokDaily'
+import { ensurePublicSyncOnce, ensureTodayStory } from '../../../../lib/grokDaily'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,8 +18,14 @@ async function handle(request: Request) {
   }
 
   try {
+    const sync = await ensurePublicSyncOnce()
     const result = await ensureTodayStory()
     const parts: string[] = []
+    if (sync) {
+      parts.push(
+        `公開同步：清 ${sync.cleared.length}／刷 ${sync.refreshed.length}／核准 ${sync.approvedPublic.length}`,
+      )
+    }
     if (result.created) parts.push('已生成／寫入今日故事')
     else parts.push('今日故事已存在，略過重複文字生成')
     if (result.imageGenerated) parts.push('已生成當日插畫')
@@ -27,6 +33,7 @@ async function handle(request: Request) {
     return NextResponse.json({
       ok: true,
       ...result,
+      sync,
       message: parts.join('；'),
     })
   } catch {

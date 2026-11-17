@@ -200,6 +200,43 @@ export function AdminClient() {
     }
   }
 
+  async function syncPublic(promoteDrafts: boolean) {
+    setBusy(true)
+    setStatus(promoteDrafts ? '核准草稿並同步公開…' : '同步公開（模式 B · 清未核准）…')
+    try {
+      const res = await fetch('/api/admin/story/sync-public', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromDate: '2026-11-18', promoteDrafts }),
+      })
+      const data = (await res.json()) as {
+        message?: string
+        error?: string
+        report?: {
+          cleared?: { date: string }[]
+          refreshed?: { date: string; title: string }[]
+          approvedPublic?: { date: string; title: string }[]
+        }
+      }
+      if (!res.ok) {
+        setStatus(data.error || '同步失敗')
+        return
+      }
+      await loadSettings()
+      await loadWeek()
+      if (editDate) await loadStory(editDate)
+      const cleared = data.report?.cleared?.map((c) => c.date).join(', ') || '無'
+      const refreshed = data.report?.refreshed?.map((r) => `${r.date}「${r.title}」`).join(', ') || '無'
+      const approved =
+        data.report?.approvedPublic?.map((a) => `${a.date}「${a.title}」`).join(', ') || '無'
+      setStatus(
+        `${data.message || '已同步'}｜清除：${cleared}｜刷新：${refreshed}｜公開核准：${approved}`,
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function generate() {
     const date = editDate || tomorrow || today
     setBusy(true)
@@ -524,6 +561,29 @@ export function AdminClient() {
               disabled={busy}
             >
               自動 GEN 圖
+            </button>
+          </div>
+
+          <h2 className="admin-section-title">同步公開</h2>
+          <p className="admin-lead">
+            自 2026-11-18 起：鎖定模式 B、刪除 sample／grok 未核准公開列、把舊公仔樣本核准稿刷新為茶記文稿。可重複執行。若草稿已審好，用「核准草稿並同步」一次上街。
+          </p>
+          <div className="admin-actions">
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => void syncPublic(false)}
+              disabled={busy}
+            >
+              同步公開（清未核准）
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void syncPublic(true)}
+              disabled={busy}
+            >
+              核准草稿並同步
             </button>
           </div>
         </section>
