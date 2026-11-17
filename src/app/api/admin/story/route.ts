@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date') || tomorrowKey()
   if (!isAdminEditableDate(date)) {
-    return NextResponse.json({ error: '只能預覽／編輯今日或明日' }, { status: 400 })
+    return NextResponse.json({ error: '只能預覽／編輯今起一週內的日期' }, { status: 400 })
   }
 
   const row = await getAdminStory(date)
@@ -47,7 +47,7 @@ export async function PUT(request: Request) {
 
   const date = body.date || tomorrowKey()
   if (!isAdminEditableDate(date)) {
-    return NextResponse.json({ error: '只能儲存今日或明日' }, { status: 400 })
+    return NextResponse.json({ error: '只能儲存今起一週內的日期' }, { status: 400 })
   }
 
   try {

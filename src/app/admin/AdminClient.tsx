@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import type { DailyStory, WisdomKind } from '../../data/dailyStories'
+import type { AdminAppSettings, PublishMode, WeekStoryItem } from '../../lib/adminTypes'
 
-type Tab = 'tomorrow' | 'today' | 'comments'
+type Tab = 'settings' | 'day' | 'week' | 'comments'
 
 type AdminComment = {
   id: string
@@ -40,7 +41,8 @@ export function AdminClient() {
   const [loginError, setLoginError] = useState('')
   const [today, setToday] = useState('')
   const [tomorrow, setTomorrow] = useState('')
-  const [tab, setTab] = useState<Tab>('tomorrow')
+  const [tab, setTab] = useState<Tab>('day')
+  const [editDate, setEditDate] = useState('')
   const [story, setStory] = useState<DailyStory>(EMPTY)
   const [source, setSource] = useState('')
   const [hasImage, setHasImage] = useState(false)
@@ -51,6 +53,11 @@ export function AdminClient() {
   const [commentDate, setCommentDate] = useState('')
   const [replyBody, setReplyBody] = useState('')
   const [replyParent, setReplyParent] = useState<string | null>(null)
+  const [settings, setSettings] = useState<AdminAppSettings>({
+    publishMode: 'open',
+    autoGenImage: false,
+  })
+  const [weekItems, setWeekItems] = useState<WeekStoryItem[]>([])
 
   const refreshMe = useCallback(async () => {
     const res = await fetch('/api/admin/me')
@@ -68,12 +75,21 @@ export function AdminClient() {
       authenticated?: boolean
       today?: string
       tomorrow?: string
-      username?: string
     }
     setAuthed(Boolean(data.authenticated))
-    if (data.today) setToday(data.today)
+    if (data.today) {
+      setToday(data.today)
+      setCommentDate(data.today)
+      setEditDate((prev) => prev || data.today || '')
+    }
     if (data.tomorrow) setTomorrow(data.tomorrow)
-    if (data.today) setCommentDate(data.today)
+  }, [])
+
+  const loadSettings = useCallback(async () => {
+    const res = await fetch('/api/admin/settings')
+    if (!res.ok) return
+    const data = (await res.json()) as { settings?: AdminAppSettings }
+    if (data.settings) setSettings(data.settings)
   }, [])
 
   useEffect(() => {
@@ -105,6 +121,16 @@ export function AdminClient() {
     }
   }, [])
 
+  const loadWeek = useCallback(async () => {
+    const res = await fetch(`/api/admin/story/week?start=${encodeURIComponent(today || '')}`)
+    const data = (await res.json()) as { items?: WeekStoryItem[]; error?: string }
+    if (!res.ok) {
+      setStatus(data.error || '載入週覽失敗')
+      return
+    }
+    setWeekItems(data.items || [])
+  }, [today])
+
   const loadComments = useCallback(async (date: string) => {
     const res = await fetch(`/api/admin/comments?date=${encodeURIComponent(date)}&all=1`)
     const data = (await res.json()) as { comments?: AdminComment[] }
@@ -113,13 +139,20 @@ export function AdminClient() {
 
   useEffect(() => {
     if (!authed) return
+    void loadSettings()
+  }, [authed, loadSettings])
+
+  useEffect(() => {
+    if (!authed) return
     if (tab === 'comments') {
       void loadComments(commentDate || today)
-    } else {
-      const date = tab === 'tomorrow' ? tomorrow : today
+    } else if (tab === 'week') {
+      if (today) void loadWeek()
+    } else if (tab === 'day') {
+      const date = editDate || tomorrow || today
       if (date) void loadStory(date)
     }
-  }, [authed, tab, today, tomorrow, commentDate, loadStory, loadComments])
+  }, [authed, tab, today, tomorrow, editDate, commentDate, loadStory, loadComments, loadWeek])
 
   async function login(e: React.FormEvent) {
     e.preventDefault()
@@ -143,10 +176,34 @@ export function AdminClient() {
     setAuthed(false)
   }
 
-  async function generate() {
-    const date = tab === 'tomorrow' ? tomorrow : today
+  async function saveSettings(patch: Partial<AdminAppSettings>) {
     setBusy(true)
-    setStatus('正在生成文字與插畫…')
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const data = (await res.json()) as {
+        settings?: AdminAppSettings
+        message?: string
+        error?: string
+      }
+      if (!res.ok) {
+        setStatus(data.error || '設定儲存失敗')
+        return
+      }
+      if (data.settings) setSettings(data.settings)
+      setStatus(data.message || '設定已更新')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function generate() {
+    const date = editDate || tomorrow || today
+    setBusy(true)
+    setStatus('正在生成文字…')
     try {
       const res = await fetch('/api/admin/story/generate', {
         method: 'POST',
@@ -170,20 +227,21 @@ export function AdminClient() {
       setHasImage(Boolean(data.hasImage))
       setImageUrl(data.imageUrl || `/api/admin/story/image?date=${encodeURIComponent(date)}&t=${Date.now()}`)
       setStatus(data.message || '已生成')
+      if (tab === 'week') await loadWeek()
     } finally {
       setBusy(false)
     }
   }
 
-  async function regenerateImage() {
-    const date = tab === 'tomorrow' ? tomorrow : today
+  async function genImage(force: boolean) {
+    const date = editDate || tomorrow || today
     setBusy(true)
-    setStatus('正在依目前文稿重產插畫…')
+    setStatus(force ? '正在再 GEN 圖…' : '正在 GEN 圖…')
     try {
       const res = await fetch('/api/admin/story/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...story, date, force: true }),
+        body: JSON.stringify({ ...story, date, force }),
       })
       const data = (await res.json()) as {
         story?: DailyStory
@@ -195,7 +253,7 @@ export function AdminClient() {
         generated?: boolean
       }
       if (!res.ok && !data.hasImage) {
-        setStatus(data.error || data.message || '重產失敗')
+        setStatus(data.error || data.message || 'GEN 圖失敗')
         return
       }
       if (data.story) setStory({ ...data.story, date })
@@ -205,14 +263,15 @@ export function AdminClient() {
         data.imageUrl ||
           `/api/admin/story/image?date=${encodeURIComponent(date)}&t=${Date.now()}`,
       )
-      setStatus(data.message || (data.generated ? '已重產插畫' : '插畫狀態已更新'))
+      setStatus(data.message || (data.generated ? '已 GEN 圖' : '插畫狀態已更新'))
+      if (tab === 'week') await loadWeek()
     } finally {
       setBusy(false)
     }
   }
 
   async function save() {
-    const date = tab === 'tomorrow' ? tomorrow : today
+    const date = editDate || tomorrow || today
     setBusy(true)
     setStatus('')
     try {
@@ -238,9 +297,40 @@ export function AdminClient() {
       if (typeof data.hasImage === 'boolean') setHasImage(data.hasImage)
       if (data.imageUrl) setImageUrl(data.imageUrl)
       setStatus(data.message || '已核准')
+      if (tab === 'week') await loadWeek()
     } finally {
       setBusy(false)
     }
+  }
+
+  async function generateWeek() {
+    setBusy(true)
+    setStatus('正在預產一週文字…')
+    try {
+      const res = await fetch('/api/admin/story/week', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start: today }),
+      })
+      const data = (await res.json()) as {
+        items?: WeekStoryItem[]
+        message?: string
+        error?: string
+      }
+      if (!res.ok) {
+        setStatus(data.error || '週預產失敗')
+        return
+      }
+      setWeekItems(data.items || [])
+      setStatus(data.message || '一週文字已預產')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function openWeekDay(date: string) {
+    setEditDate(date)
+    setTab('day')
   }
 
   async function deleteComment(id: string) {
@@ -330,6 +420,10 @@ export function AdminClient() {
     )
   }
 
+  const modeLabel =
+    settings.publishMode === 'approve_required' ? '模式 B · 必須核准' : '模式 A · 預產可公開'
+  const imageModeLabel = settings.autoGenImage ? '自動 GEN 圖' : '人手 GEN 圖'
+
   return (
     <main className="page admin-page">
       <header className="page-header admin-header">
@@ -342,20 +436,34 @@ export function AdminClient() {
         </button>
       </header>
 
+      <p className="admin-meta">
+        {modeLabel} · {imageModeLabel}
+      </p>
+
       <nav className="admin-tabs" aria-label="管理分頁">
         <button
           type="button"
-          className={tab === 'tomorrow' ? 'active' : undefined}
-          onClick={() => setTab('tomorrow')}
+          className={tab === 'settings' ? 'active' : undefined}
+          onClick={() => setTab('settings')}
         >
-          明日繪卷 · {tomorrow}
+          設定
         </button>
         <button
           type="button"
-          className={tab === 'today' ? 'active' : undefined}
-          onClick={() => setTab('today')}
+          className={tab === 'day' ? 'active' : undefined}
+          onClick={() => {
+            setTab('day')
+            if (!editDate) setEditDate(tomorrow || today)
+          }}
         >
-          今日 · {today}
+          單日 · {editDate || tomorrow}
+        </button>
+        <button
+          type="button"
+          className={tab === 'week' ? 'active' : undefined}
+          onClick={() => setTab('week')}
+        >
+          一週預覽
         </button>
         <button
           type="button"
@@ -368,14 +476,109 @@ export function AdminClient() {
 
       {status ? <p className="admin-status">{status}</p> : null}
 
-      {tab !== 'comments' ? (
+      {tab === 'settings' ? (
+        <section className="admin-story admin-settings">
+          <h2 className="admin-section-title">發布模式</h2>
+          <p className="admin-lead">
+            模式 A：預產／cron 生成後，到了該日即可公開（可不按核准）。模式 B：未核准絕不公開（不含 sample／grok
+            自動上街）。
+          </p>
+          <div className="admin-choice-row" role="radiogroup" aria-label="發布模式">
+            <button
+              type="button"
+              className={settings.publishMode === 'open' ? 'choice-chip active' : 'choice-chip'}
+              onClick={() => void saveSettings({ publishMode: 'open' as PublishMode })}
+              disabled={busy}
+            >
+              模式 A · 預產可公開
+            </button>
+            <button
+              type="button"
+              className={
+                settings.publishMode === 'approve_required' ? 'choice-chip active' : 'choice-chip'
+              }
+              onClick={() => void saveSettings({ publishMode: 'approve_required' as PublishMode })}
+              disabled={busy}
+            >
+              模式 B · 必須核准
+            </button>
+          </div>
+
+          <h2 className="admin-section-title">插畫 GEN</h2>
+          <p className="admin-lead">
+            預設人手：建立文字時不自動畫圖，由你按「GEN 圖」。若開啟自動，仍可隨時「再 GEN 圖」。
+          </p>
+          <div className="admin-choice-row" role="radiogroup" aria-label="插畫模式">
+            <button
+              type="button"
+              className={!settings.autoGenImage ? 'choice-chip active' : 'choice-chip'}
+              onClick={() => void saveSettings({ autoGenImage: false })}
+              disabled={busy}
+            >
+              人手 GEN 圖
+            </button>
+            <button
+              type="button"
+              className={settings.autoGenImage ? 'choice-chip active' : 'choice-chip'}
+              onClick={() => void saveSettings({ autoGenImage: true })}
+              disabled={busy}
+            >
+              自動 GEN 圖
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {tab === 'week' ? (
         <section className="admin-story">
           <p className="admin-lead">
-            流程：① 預先生成（文字＋插畫）→ ② 預覽並批改所有文字 → ③ 可依改稿重產插畫 → ④ 儲存核准。
-            {tab === 'tomorrow' ? '明日內容核准後，到了該日才會公開。' : '今日核准後立即套用公開頁。'}
+            一次預產今起 7 日文字（已核准日略過）。公開仍跟目前發布模式；每集可進單日批改、GEN 圖、核准。
+          </p>
+          <div className="admin-actions">
+            <button type="button" className="btn primary" onClick={generateWeek} disabled={busy}>
+              預產一週文字
+            </button>
+            <button type="button" className="btn soft" onClick={() => void loadWeek()} disabled={busy}>
+              重新整理
+            </button>
+          </div>
+          <ul className="admin-week-list">
+            {weekItems.map((item) => (
+              <li key={item.date}>
+                <button type="button" className="admin-week-row" onClick={() => void openWeekDay(item.date)}>
+                  <span className="admin-week-date">{item.date}</span>
+                  <strong>{item.title}</strong>
+                  <span className="admin-week-meta">
+                    {item.approved ? '已核准' : item.source === 'empty' ? '空白' : item.source}
+                    {' · '}
+                    {item.hasImage ? '有圖' : '無圖'}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {tab === 'day' ? (
+        <section className="admin-story">
+          <label className="admin-date-field">
+            編輯日期
+            <input
+              type="date"
+              value={editDate || tomorrow || today}
+              min={today}
+              onChange={(e) => setEditDate(e.target.value)}
+            />
+          </label>
+          <p className="admin-lead">
+            ① 預產文字 → ② 批改 → ③ GEN／再 GEN 圖 → ④ 儲存核准。
+            {settings.publishMode === 'approve_required'
+              ? '（模式 B：未核准不會公開。）'
+              : '（模式 A：已生成內容到日可公開。）'}
           </p>
           <p className="admin-meta">
-            來源：{source || '—'} · 插畫：{hasImage ? '已預產' : '預設圖'} ·{' '}
+            來源：{source || '—'} · 插畫：{hasImage ? '已 GEN' : '預設圖'} ·{' '}
             {busy ? '處理中…' : '可編輯'}
           </p>
 
@@ -387,10 +590,13 @@ export function AdminClient() {
 
           <div className="admin-actions">
             <button type="button" className="btn soft" onClick={generate} disabled={busy}>
-              ① 預先生成
+              ① 預產文字
             </button>
-            <button type="button" className="btn soft" onClick={regenerateImage} disabled={busy}>
-              ③ 重產插畫
+            <button type="button" className="btn soft" onClick={() => void genImage(false)} disabled={busy}>
+              GEN 圖
+            </button>
+            <button type="button" className="btn soft" onClick={() => void genImage(true)} disabled={busy}>
+              再 GEN 圖
             </button>
             <button type="button" className="btn primary" onClick={save} disabled={busy}>
               ④ 儲存核准
@@ -475,7 +681,9 @@ export function AdminClient() {
             />
           </label>
         </section>
-      ) : (
+      ) : null}
+
+      {tab === 'comments' ? (
         <section className="admin-comments">
           <label className="admin-date-field">
             日期
@@ -535,7 +743,7 @@ export function AdminClient() {
             ))}
           </ul>
         </section>
-      )}
+      ) : null}
     </main>
   )
 }

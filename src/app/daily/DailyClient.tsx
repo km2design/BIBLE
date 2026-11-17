@@ -43,7 +43,15 @@ function DailyClientInner() {
           }
           return
         }
-        const data = (await res.json()) as { story: DailyStory }
+        const data = (await res.json()) as {
+          story?: DailyStory | null
+          unavailable?: boolean
+        }
+        if (!cancelled && (data.unavailable || !data.story)) {
+          setMissing(true)
+          setLoading(false)
+          return
+        }
         if (!cancelled && data.story) {
           setStory({
             ...data.story,
@@ -78,7 +86,11 @@ function DailyClientInner() {
 
       {missing ? (
         <section className="daily-block">
-          <p className="daily-story">這一天還沒有封存的繪卷。請從往日列表選另一天，或回到今日。</p>
+          <p className="daily-story">
+            {isToday
+              ? '今日繪卷尚未核准公開（或尚在準備中）。請稍後再看，或先讀往日繪卷。'
+              : '這一天還沒有封存的繪卷。請從往日列表選另一天，或回到今日。'}
+          </p>
           <div className="daily-nav-row">
             <Link href="/daily" className="btn soft">
               回到今日

@@ -39,31 +39,69 @@ if (adminMe.status === 503) {
       page.waitForResponse((r) => r.url().includes('/api/admin/login') && r.status() === 200),
       page.getByRole('button', { name: '登入' }).click(),
     ])
-    await page.getByRole('button', { name: /明日繪卷/ }).waitFor({ state: 'visible', timeout: 10000 })
+    await page.getByRole('button', { name: /單日/ }).waitFor({ state: 'visible', timeout: 10000 })
     ok('admin login', await page.getByRole('button', { name: '登出' }).isVisible())
-    ok('admin tomorrow tab', await page.getByRole('button', { name: /明日繪卷/ }).isVisible())
-    await page.getByRole('button', { name: /明日繪卷/ }).click()
+    ok('admin settings tab', await page.getByRole('button', { name: '設定' }).isVisible())
+    await page.getByRole('button', { name: '設定' }).click()
+    ok('admin mode a', await page.getByRole('button', { name: /模式 A/ }).isVisible())
+    ok('admin mode b', await page.getByRole('button', { name: /模式 B/ }).isVisible())
+    ok('admin image manual', await page.getByRole('button', { name: '人手 GEN 圖' }).isVisible())
+    await page.getByRole('button', { name: /模式 B/ }).click()
+    await page.locator('.admin-status').filter({ hasText: /必須核准/ }).waitFor({
+      state: 'visible',
+      timeout: 10000,
+    })
+    const modeB = await page.evaluate(async () => {
+      const res = await fetch('/api/admin/settings')
+      return res.json()
+    })
+    ok('settings persist mode b', modeB.settings?.publishMode === 'approve_required', JSON.stringify(modeB))
+    await page.getByRole('button', { name: /模式 A/ }).click()
+    await page.locator('.admin-status').filter({ hasText: /可公開|已切換/ }).waitFor({
+      state: 'visible',
+      timeout: 10000,
+    })
+    const modeA = await page.evaluate(async () => {
+      const res = await fetch('/api/admin/settings')
+      return res.json()
+    })
+    ok('settings persist mode a', modeA.settings?.publishMode === 'open', JSON.stringify(modeA))
+
+    await page.getByRole('button', { name: '一週預覽' }).click()
+    await page.getByRole('button', { name: '預產一週文字' }).waitFor({ state: 'visible', timeout: 10000 })
+    ok('admin week tab', await page.getByRole('button', { name: '預產一週文字' }).isVisible())
+    const weekGet = await page.evaluate(async () => {
+      const res = await fetch('/api/admin/story/week')
+      return { status: res.status, body: await res.json() }
+    })
+    ok('week list api', weekGet.status === 200 && Array.isArray(weekGet.body.items) && weekGet.body.items.length === 7, JSON.stringify(weekGet.body?.items?.length))
+
+    const meDates = await page.evaluate(async () => {
+      const me = await (await fetch('/api/admin/me')).json()
+      return { today: me.today, tomorrow: me.tomorrow }
+    })
+    await page.getByRole('button', { name: /單日/ }).click()
     await page.locator('.admin-story').waitFor({ state: 'visible', timeout: 10000 })
+    await page.locator('.admin-date-field input[type="date"]').fill(meDates.tomorrow)
+    await page.waitForTimeout(1000)
     ok('admin image preview', await page.locator('.admin-image-preview img').isVisible())
     ok('admin text editor', await page.getByText('② 批改文稿').isVisible())
-    await page.getByRole('button', { name: /預先生成/ }).click()
+    await page.getByRole('button', { name: /預產文字/ }).click()
     await page.waitForTimeout(2500)
-    const titleBox = page.locator('.admin-story input').first()
+    const titleBox = page.locator('.admin-story input').nth(1)
     await titleBox.fill('煙測明日標題')
     await page.locator('textarea').nth(0).fill('煙測故事正文，可批改後再核准。')
-    ok('admin regenerate button', await page.getByRole('button', { name: /重產插畫/ }).isVisible())
+    ok('admin gen image button', await page.getByRole('button', { name: 'GEN 圖', exact: true }).isVisible())
+    ok('admin regen image button', await page.getByRole('button', { name: '再 GEN 圖' }).isVisible())
     const previewBefore = await page.locator('.admin-image-preview img').getAttribute('src')
     ok('admin preview src', Boolean(previewBefore && previewBefore.includes('/')))
-    const adminImg = await page.evaluate(async () => {
-      const me = await (await fetch('/api/admin/me')).json()
-      const res = await fetch(`/api/admin/story/image?date=${encodeURIComponent(me.tomorrow)}`)
-      return { status: res.status, type: res.headers.get('content-type') || '', tomorrow: me.tomorrow }
-    })
+    const adminImg = await page.evaluate(async (date) => {
+      const res = await fetch(`/api/admin/story/image?date=${encodeURIComponent(date)}`)
+      return { status: res.status, type: res.headers.get('content-type') || '', tomorrow: date }
+    }, meDates.tomorrow)
     ok('admin image endpoint', adminImg.status === 200 && adminImg.type.includes('image'), JSON.stringify(adminImg))
     const publicImg = await page.evaluate(async (date) => {
       const res = await fetch(`/api/daily/image?date=${encodeURIComponent(date)}`)
-      // future dates fall back to default hero (200) but must not expose private generated bytes via date leak checks —
-      // we only assert daily story API stays 404 for tomorrow.
       return { status: res.status }
     }, adminImg.tomorrow)
     ok('public image route responds', publicImg.status === 200)

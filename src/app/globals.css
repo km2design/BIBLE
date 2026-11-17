@@ -1836,6 +1836,54 @@ button.back-link {
   color: var(--ink-muted);
 }
 
+.admin-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.admin-week-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.admin-week-row {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--line);
+  background: rgba(12, 26, 36, 0.55);
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-week-date {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.admin-week-meta {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+.admin-date-field {
+  margin-bottom: 0.85rem;
+}
+
+.admin-settings .admin-section-title {
+  margin-top: 0.5rem;
+}
+
 /* —— 茶記大作戰 —— */
 .chaji-brand-row {
   display: flex;

@@ -35,10 +35,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const date = searchParams.get('date') || tomorrowKey()
   if (!isAdminEditableDate(date)) {
-    return NextResponse.json({ error: '只能預覽今日或明日插畫' }, { status: 400 })
+    return NextResponse.json({ error: '只能預覽今起一週內插畫' }, { status: 400 })
   }
 
-  const stored = await getStoryImage(date)
+  const stored = await getStoryImage(date, { admin: true })
   if (!stored) return defaultHeroResponse()
 
   return new NextResponse(new Uint8Array(stored.bytes), {
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
   const date = body.date || tomorrowKey()
   if (!isAdminEditableDate(date)) {
-    return NextResponse.json({ error: '只能為今日或明日重產插畫' }, { status: 400 })
+    return NextResponse.json({ error: '只能為今起一週內 GEN 圖' }, { status: 400 })
   }
 
   try {
@@ -80,8 +80,10 @@ export async function POST(request: Request) {
       source: result.source,
       imageUrl: result.story.imageUrl,
       message: result.generated
-        ? '已依目前文稿重產插畫，可預覽後再核准。'
-        : result.reason || '未能重產插畫',
+        ? force === false
+          ? '已 GEN 圖，可預覽後再核准。'
+          : '已再 GEN 圖，可預覽後再核准。'
+        : result.reason || '未能 GEN 圖',
       error: result.generated ? undefined : result.reason,
     }, { status: result.generated || result.hasImage ? 200 : 502 })
   } catch {

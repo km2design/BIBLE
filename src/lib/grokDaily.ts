@@ -1,11 +1,14 @@
 import {
   DAILY_ARCHIVE_START,
+  addDaysKey,
   dateKey,
   getSampleStoryForDate,
-  tomorrowKey,
+  weekDatesFrom,
   type DailyStory,
   type WisdomKind,
 } from '../data/dailyStories'
+import { getAdminSettings, isPublicSource } from './adminSettings'
+import type { PublishMode, WeekStoryItem } from './adminTypes'
 import { sql } from './db'
 import {
   DEFAULT_HERO_PATH,
@@ -108,12 +111,12 @@ async function claimGenerationSlot(date: string): Promise<boolean> {
       [date],
     )
 
-    // Upgrade a sample row so a failed/early sample cache can become Grok later.
+    // Upgrade sample/draft so admin/cron can refresh unapproved text.
     const upgraded = await sql<{ story_date: string }>(
       `update daily_stories
        set payload = '{}'::jsonb, source = 'pending', created_at = now(),
            image_mime = null, image_bytes = null
-       where story_date = $1::date and source = 'sample'
+       where story_date = $1::date and source in ('sample', 'draft')
        returning story_date::text`,
       [date],
     )
@@ -165,15 +168,24 @@ async function saveStoryImage(date: string, mime: string, bytes: Buffer): Promis
   await sql(
     `update daily_stories
      set image_mime = $2, image_bytes = $3
-     where story_date = $1::date and source in ('grok', 'sample', 'approved')`,
+     where story_date = $1::date and source in ('grok', 'sample', 'approved', 'draft')`,
     [date, mime, bytes],
   )
 }
 
-const PUBLIC_SOURCES = new Set(['grok', 'sample', 'approved'])
-
+/** Rows that hold finished text (may or may not be public depending on publish mode). */
 function isFinishedSource(source: string): boolean {
-  return PUBLIC_SOURCES.has(source)
+  return (
+    source === 'grok' ||
+    source === 'sample' ||
+    source === 'approved' ||
+    source === 'draft'
+  )
+}
+
+function writeSourceForMode(mode: PublishMode, kind: 'generated' | 'sample'): string {
+  if (mode === 'approve_required') return 'draft'
+  return kind === 'sample' ? 'sample' : 'grok'
 }
 
 /**
@@ -266,22 +278,29 @@ function isIsoDate(value: string): boolean {
 
 /**
  * Public-safe daily story loader (no paid generation):
- * - Serves finished cache (grok or sample)
- * - Otherwise returns ephemeral sample without locking the day
+ * - Mode A: serves grok/sample/approved/draft; else ephemeral sample
+ * - Mode B: serves approved only; else unavailable (no sample/grok street)
  */
-export async function getDailyStory(date: string): Promise<{ story: DailyStory; source: string }> {
+export async function getDailyStory(
+  date: string,
+): Promise<{ story: DailyStory | null; source: string; unavailable?: boolean }> {
   const today = dateKey()
   const safeDate = isIsoDate(date) ? date : today
+  const { publishMode } = await getAdminSettings()
 
   const cached = await readCache(safeDate)
-  if (cached && isFinishedSource(cached.source)) return cached
+  if (cached && isPublicSource(cached.source, publishMode)) return cached
 
   if (cached?.source === 'pending') {
     for (let i = 0; i < 8; i++) {
       await new Promise((r) => setTimeout(r, 250))
       const again = await readCache(safeDate)
-      if (again && isFinishedSource(again.source)) return again
+      if (again && isPublicSource(again.source, publishMode)) return again
     }
+  }
+
+  if (publishMode === 'approve_required') {
+    return { story: null, source: 'awaiting-approval', unavailable: true }
   }
 
   return {
@@ -297,13 +316,15 @@ export async function getArchivedStory(
   date: string,
 ): Promise<{ story: DailyStory; source: string } | null> {
   if (!isIsoDate(date)) return null
+  const { publishMode } = await getAdminSettings()
   const cached = await readCache(date)
-  if (!cached || !isFinishedSource(cached.source)) return null
+  if (!cached || !isPublicSource(cached.source, publishMode)) return null
   return cached
 }
 
 export async function listDailyHistory(limit = 60): Promise<DailyHistoryItem[]> {
   const capped = Math.min(Math.max(limit, 1), 90)
+  const { publishMode } = await getAdminSettings()
   try {
     const rows = await sql<{
       date: string
@@ -314,7 +335,7 @@ export async function listDailyHistory(limit = 60): Promise<DailyHistoryItem[]> 
       `select story_date::text as date, payload, source,
               (image_bytes is not null) as has_image
        from daily_stories
-       where source in ('grok', 'sample', 'approved')
+       where source in ('grok', 'sample', 'approved', 'draft')
          and story_date >= $2::date
          and story_date <= $3::date
        order by story_date desc
@@ -323,6 +344,7 @@ export async function listDailyHistory(limit = 60): Promise<DailyHistoryItem[]> 
     )
     const items: DailyHistoryItem[] = []
     for (const row of rows) {
+      if (!isPublicSource(row.source, publishMode)) continue
       const story = parsePayload(row.payload)
       if (!story) continue
       items.push({
@@ -341,16 +363,25 @@ export async function listDailyHistory(limit = 60): Promise<DailyHistoryItem[]> 
 
 export async function getStoryImage(
   date: string,
+  opts?: { admin?: boolean },
 ): Promise<{ mime: string; bytes: Buffer } | null> {
   if (!isIsoDate(date)) return null
   try {
-    const rows = await sql<{ image_mime: string | null; image_bytes: Buffer | Uint8Array | null }>(
-      `select image_mime, image_bytes from daily_stories
+    const rows = await sql<{
+      image_mime: string | null
+      image_bytes: Buffer | Uint8Array | null
+      source: string
+    }>(
+      `select image_mime, image_bytes, source from daily_stories
        where story_date = $1::date and image_bytes is not null`,
       [date],
     )
     const row = rows[0]
     if (!row?.image_bytes) return null
+    if (!opts?.admin) {
+      const { publishMode } = await getAdminSettings()
+      if (!isPublicSource(row.source, publishMode)) return null
+    }
     const bytes = Buffer.isBuffer(row.image_bytes)
       ? row.image_bytes
       : Buffer.from(row.image_bytes)
@@ -376,7 +407,8 @@ export async function ensureTodayStory(): Promise<{
 
 /**
  * Generate or upgrade a specific calendar day's story (cron / admin day-ahead).
- * Does not overwrite admin-approved rows unless they still need an image.
+ * Does not overwrite admin-approved (or Mode A grok) rows unless they still need an image
+ * and auto-gen image is enabled.
  */
 export async function ensureStoryForDate(date: string): Promise<{
   date: string
@@ -390,10 +422,16 @@ export async function ensureStoryForDate(date: string): Promise<{
   }
 
   const apiKey = process.env.XAI_API_KEY?.trim()
+  const settings = await getAdminSettings()
   const before = await readCache(date)
 
-  if (before && (before.source === 'grok' || before.source === 'approved')) {
-    const imageGenerated = await ensureStoryImage(date, before.story, apiKey)
+  async function maybeImage(story: DailyStory, force = false): Promise<boolean> {
+    if (!settings.autoGenImage && !force) return false
+    return ensureStoryImage(date, story, apiKey, force)
+  }
+
+  if (before && (before.source === 'approved' || before.source === 'grok')) {
+    const imageGenerated = await maybeImage(before.story)
     const refreshed = await readCache(date)
     return {
       date,
@@ -406,13 +444,14 @@ export async function ensureStoryForDate(date: string): Promise<{
 
   if (!apiKey) {
     const sample = getSampleStoryForDate(date)
+    const source = writeSourceForMode(settings.publishMode, 'sample')
     if (!before || before.source === 'pending') {
-      if (before?.source === 'pending') await finalizeCache(date, sample, 'sample')
-      else await writeCache(date, sample, 'sample')
+      if (before?.source === 'pending') await finalizeCache(date, sample, source)
+      else await writeCache(date, sample, source)
     }
     return {
       date,
-      source: 'sample',
+      source,
       created: !before || before.source === 'pending',
       imageGenerated: false,
       title: sample.title,
@@ -423,7 +462,7 @@ export async function ensureStoryForDate(date: string): Promise<{
   if (!claimed) {
     const existing = await readCache(date)
     if (existing && existing.source !== 'pending') {
-      const imageGenerated = await ensureStoryImage(date, existing.story, apiKey)
+      const imageGenerated = await maybeImage(existing.story)
       return {
         date,
         source: existing.source,
@@ -436,11 +475,11 @@ export async function ensureStoryForDate(date: string): Promise<{
       await new Promise((r) => setTimeout(r, 500))
       const again = await readCache(date)
       if (again && again.source !== 'pending') {
-        const imageGenerated = await ensureStoryImage(date, again.story, apiKey)
+        const imageGenerated = await maybeImage(again.story)
         return {
           date,
           source: again.source,
-          created: again.source === 'grok',
+          created: again.source === 'grok' || again.source === 'draft',
           imageGenerated,
           title: again.story.title,
         }
@@ -449,7 +488,7 @@ export async function ensureStoryForDate(date: string): Promise<{
     const sample = getSampleStoryForDate(date)
     return {
       date,
-      source: 'sample',
+      source: writeSourceForMode(settings.publishMode, 'sample'),
       created: false,
       imageGenerated: false,
       title: sample.title,
@@ -460,17 +499,20 @@ export async function ensureStoryForDate(date: string): Promise<{
     const generated = await callGrok(date, apiKey)
     if (!generated) {
       const sample = getSampleStoryForDate(date)
-      await finalizeCache(date, sample, 'sample')
-      const imageGenerated = await ensureStoryImage(date, sample, apiKey)
-      return { date, source: 'sample', created: true, imageGenerated, title: sample.title }
+      const source = writeSourceForMode(settings.publishMode, 'sample')
+      await finalizeCache(date, sample, source)
+      const imageGenerated = await maybeImage(sample)
+      return { date, source, created: true, imageGenerated, title: sample.title }
     }
-    await finalizeCache(date, generated, 'grok')
-    const imageGenerated = await ensureStoryImage(date, generated, apiKey)
-    return { date, source: 'grok', created: true, imageGenerated, title: generated.title }
+    const source = writeSourceForMode(settings.publishMode, 'generated')
+    await finalizeCache(date, generated, source)
+    const imageGenerated = await maybeImage(generated)
+    return { date, source, created: true, imageGenerated, title: generated.title }
   } catch {
     const sample = getSampleStoryForDate(date)
-    await finalizeCache(date, sample, 'sample')
-    return { date, source: 'sample', created: true, imageGenerated: false, title: sample.title }
+    const source = writeSourceForMode(settings.publishMode, 'sample')
+    await finalizeCache(date, sample, source)
+    return { date, source, created: true, imageGenerated: false, title: sample.title }
   }
 }
 
@@ -560,9 +602,46 @@ export async function saveApprovedStory(
   return saved ?? { story: withImageUrl(next, false), source: 'approved' }
 }
 
+/** Admin may edit today through today+6 (one week window). */
 export function isAdminEditableDate(date: string): boolean {
   if (!isIsoDate(date)) return false
-  return date === dateKey() || date === tomorrowKey()
+  const today = dateKey()
+  const end = addDaysKey(today, 6)
+  return date >= today && date <= end
+}
+
+export type { WeekStoryItem }
+
+export async function listWeekStories(start = dateKey()): Promise<WeekStoryItem[]> {
+  const dates = weekDatesFrom(start)
+  const items: WeekStoryItem[] = []
+  for (const date of dates) {
+    const row = await getAdminStory(date)
+    const source = row?.source || 'empty'
+    items.push({
+      date,
+      title: row?.story.title || '（尚未生成）',
+      source,
+      hasImage: Boolean(row?.hasImage),
+      imageUrl: row?.hasImage ? adminImagePreviewUrl(date) : DEFAULT_HERO_PATH,
+      approved: source === 'approved',
+    })
+  }
+  return items
+}
+
+/** Pre-generate text (and optional auto image) for a 7-day window. */
+export async function ensureWeekStories(start = dateKey()): Promise<{
+  start: string
+  results: Awaited<ReturnType<typeof ensureStoryForDate>>[]
+  items: WeekStoryItem[]
+}> {
+  const dates = weekDatesFrom(start)
+  const results = []
+  for (const date of dates) {
+    results.push(await ensureStoryForDate(date))
+  }
+  return { start, results, items: await listWeekStories(start) }
 }
 
 /**
@@ -601,10 +680,13 @@ export async function saveEditorStory(
     sample: existing?.source === 'sample',
   }
 
+  const settings = await getAdminSettings()
   const source =
     existing?.source === 'approved' || existing?.source === 'grok'
       ? existing.source
-      : 'sample'
+      : existing?.source === 'draft'
+        ? 'draft'
+        : writeSourceForMode(settings.publishMode, 'sample')
 
   await sql(
     `insert into daily_stories (story_date, payload, source)

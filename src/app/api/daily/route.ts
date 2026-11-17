@@ -26,7 +26,14 @@ export async function GET(request: Request) {
 
   // Today: public-safe loader (cache or ephemeral sample; never paid gen).
   if (requested === today) {
-    const { story, source } = await getDailyStory(today)
+    const { story, source, unavailable } = await getDailyStory(today)
+    if (unavailable || !story) {
+      return NextResponse.json({
+        story: null,
+        source: source || 'awaiting-approval',
+        unavailable: true,
+      })
+    }
     return NextResponse.json({
       story,
       source: source === 'sample' ? 'sample' : 'cached',

@@ -158,6 +158,18 @@ export function tomorrowKey(from = new Date()): string {
   return dateKey(new Date(from.getTime() + 24 * 60 * 60 * 1000))
 }
 
+/** Add calendar days in Asia/Hong_Kong (ISO date in → ISO date out). */
+export function addDaysKey(isoDate: string, days: number): string {
+  const base = new Date(`${isoDate}T12:00:00+08:00`)
+  if (Number.isNaN(base.getTime())) return isoDate
+  return dateKey(new Date(base.getTime() + days * 86_400_000))
+}
+
+/** Seven HK calendar days starting at `start` (default today). */
+export function weekDatesFrom(start = dateKey()): string[] {
+  return Array.from({ length: 7 }, (_, i) => addDaysKey(start, i))
+}
+
 export function getSampleStoryForDate(date = dateKey()): DailyStory {
   // Day one of the archive is pinned to 「一句夠用」; later days rotate the pool.
   if (date === DAILY_ARCHIVE_START) {
