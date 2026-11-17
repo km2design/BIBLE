@@ -9,6 +9,7 @@ import {
 } from '../data/dailyStories'
 import { getAdminSettings, isPublicSource } from './adminSettings'
 import type { PublishMode, WeekStoryItem } from './adminTypes'
+import { buildChajiTextUserPrompt, CHAJI_TEXT_SYSTEM } from './chajiPrompt'
 import { sql } from './db'
 import {
   DEFAULT_HERO_PATH,
@@ -228,17 +229,10 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
     },
     body: JSON.stringify({
       model: GROK_MODEL,
-      temperature: 0.8,
+      temperature: 0.85,
       messages: [
-        {
-          role: 'system',
-          content:
-            '你是基督教靈修文章助手。用繁體中文寫短篇日常情境故事（第三人稱或場景敘事），帶出經文與人生智慧。不要用公仔／吉祥物／角色名牌作為說話者；不要寫「某某公仔說」。輸出嚴格 JSON，不要 markdown。',
-        },
-        {
-          role: 'user',
-          content: `日期 ${date}。請輸出 JSON 欄位：title, story(120-180字，故事驅動、無公仔代言), verseRef, verse(和合本風格一句至三句), wisdomKind(必須是 ${KINDS.join('/')} 之一), wisdom(一句), devotionTitle, devotion(兩句反思問題或默想), prayer(一句禱告), characterId("story")。`,
-        },
+        { role: 'system', content: CHAJI_TEXT_SYSTEM },
+        { role: 'user', content: buildChajiTextUserPrompt(date, KINDS) },
       ],
     }),
   })
@@ -251,15 +245,20 @@ async function callGrok(date: string, apiKey: string): Promise<DailyStory | null
   const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
   const matched = fenced.match(/\{[\s\S]*\}/)
   const jsonText = matched ? matched[0] : fenced
-  const parsed = JSON.parse(jsonText) as GrokJson
+  let parsed: GrokJson
+  try {
+    parsed = JSON.parse(jsonText) as GrokJson
+  } catch {
+    return null
+  }
   const kind = (KINDS.includes(parsed.wisdomKind as WisdomKind)
     ? parsed.wisdomKind
     : '反思') as WisdomKind
 
   return {
     date,
-    characterId: parsed.characterId || 'story',
-    title: parsed.title || '今日繪卷',
+    characterId: parsed.characterId || 'siuyau',
+    title: parsed.title || '茶記今日',
     story: parsed.story || '',
     verseRef: parsed.verseRef || '詩篇 23:1',
     verse: parsed.verse || '耶和華是我的牧者，我必不致缺乏。',
