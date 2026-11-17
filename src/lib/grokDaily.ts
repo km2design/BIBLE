@@ -7,8 +7,24 @@ import {
   type DailyStory,
   type WisdomKind,
 } from '../data/dailyStories'
-import { getAdminSettings, isPublicSource } from './adminSettings'
+import { getAdminSettings, isPublicSource, saveAdminSettings } from './adminSettings'
 import type { PublishMode, WeekStoryItem } from './adminTypes'
+
+/** One-shot key: purge stale public samples and lock Mode B from this date. */
+export const PUBLIC_SYNC_FROM_DATE = '2026-11-18'
+const PUBLIC_SYNC_SETTINGS_KEY = 'public_sync_v1'
+
+/** Pre-茶記 doll ids that must not remain as public approved street content. */
+const STALE_CAST_IDS = new Set([
+  'anan',
+  'xiaoguang',
+  'lvren',
+  'shouwang',
+  'rouxin',
+  'mingyan',
+])
+
+const STALE_STORY_MARKERS = ['大家面前總是微笑', '私底下卻很累']
 import { buildChajiTextUserPrompt, CHAJI_TEXT_SYSTEM } from './chajiPrompt'
 import { sql } from './db'
 import {
@@ -285,6 +301,8 @@ export async function getDailyStory(
 ): Promise<{ story: DailyStory | null; source: string; unavailable?: boolean }> {
   const today = dateKey()
   const safeDate = isIsoDate(date) ? date : today
+  // One-shot: Mode B + purge sample/grok + refresh stale approved from 2026-11-18.
+  await ensurePublicSyncOnce()
   const { publishMode } = await getAdminSettings()
 
   const cached = await readCache(safeDate)
@@ -701,6 +719,184 @@ export async function saveEditorStory(
 
   const saved = await readCache(date)
   return saved ?? { story: withImageUrl(next, false), source }
+}
+
+export type PublicSyncReport = {
+  fromDate: string
+  publishMode: PublishMode
+  cleared: { date: string; source: string; title: string }[]
+  refreshed: { date: string; title: string; reason: string }[]
+  approvedPublic: { date: string; title: string; characterId: string }[]
+  draftsKept: { date: string; title: string }[]
+  promoted?: { date: string; title: string }[]
+}
+
+function isStaleStreetPayload(story: DailyStory): boolean {
+  const id = (story.characterId || '').trim().toLowerCase()
+  if (STALE_CAST_IDS.has(id)) return true
+  const body = story.story || ''
+  return STALE_STORY_MARKERS.some((m) => body.includes(m))
+}
+
+/**
+ * Mode B + remove non-approved public street rows from `fromDate` onward.
+ * Refreshes stale pre-茶記 approved payloads (old doll cast / formal sample)
+ * to the current Cantonese sample while keeping `approved` so the front stays live.
+ * Optionally promotes remaining drafts to approved (Admin 「核准並同步」).
+ */
+export async function syncPublicFromApproved(
+  fromDate = PUBLIC_SYNC_FROM_DATE,
+  opts?: { promoteDrafts?: boolean },
+): Promise<PublicSyncReport> {
+  if (!isIsoDate(fromDate)) throw new Error('invalid date')
+
+  const settings = await saveAdminSettings({ publishMode: 'approve_required' })
+
+  const rows = await sql<{
+    date: string
+    payload: DailyStory | string
+    source: string
+  }>(
+    `select story_date::text as date, payload, source
+     from daily_stories
+     where story_date >= $1::date
+     order by story_date asc`,
+    [fromDate],
+  )
+
+  const cleared: PublicSyncReport['cleared'] = []
+  const refreshed: PublicSyncReport['refreshed'] = []
+  const promoted: PublicSyncReport['promoted'] = []
+
+  for (const row of rows) {
+    const story = parsePayload(row.payload)
+    const title = story?.title || '（無標題）'
+
+    if (row.source === 'sample' || row.source === 'grok' || row.source === 'pending') {
+      await sql(`delete from daily_stories where story_date = $1::date`, [row.date])
+      cleared.push({ date: row.date, source: row.source, title })
+      continue
+    }
+
+    if (
+      (row.source === 'approved' || row.source === 'draft') &&
+      story &&
+      isStaleStreetPayload(story)
+    ) {
+      const next = {
+        ...getSampleStoryForDate(row.date),
+        date: row.date,
+        sample: false,
+      }
+      await sql(
+        `update daily_stories
+         set payload = $2::jsonb,
+             source = $3,
+             image_mime = null,
+             image_bytes = null
+         where story_date = $1::date`,
+        [row.date, JSON.stringify({ ...next, imageUrl: undefined }), row.source],
+      )
+      refreshed.push({
+        date: row.date,
+        title: next.title,
+        reason: `stale:${story.characterId || 'unknown'}→${next.characterId}`,
+      })
+    }
+  }
+
+  if (opts?.promoteDrafts) {
+    const drafts = await sql<{ date: string; payload: DailyStory | string }>(
+      `select story_date::text as date, payload from daily_stories
+       where story_date >= $1::date and source = 'draft'
+       order by story_date asc`,
+      [fromDate],
+    )
+    for (const row of drafts) {
+      await sql(
+        `update daily_stories set source = 'approved' where story_date = $1::date`,
+        [row.date],
+      )
+      const story = parsePayload(row.payload)
+      promoted.push({ date: row.date, title: story?.title || '（無標題）' })
+    }
+  }
+
+  const remaining = await sql<{
+    date: string
+    payload: DailyStory | string
+    source: string
+  }>(
+    `select story_date::text as date, payload, source
+     from daily_stories
+     where story_date >= $1::date
+       and source in ('approved', 'draft')
+     order by story_date asc`,
+    [fromDate],
+  )
+
+  const approvedPublic: PublicSyncReport['approvedPublic'] = []
+  const draftsKept: PublicSyncReport['draftsKept'] = []
+  for (const row of remaining) {
+    const story = parsePayload(row.payload)
+    const title = story?.title || '（無標題）'
+    if (row.source === 'approved') {
+      approvedPublic.push({
+        date: row.date,
+        title,
+        characterId: story?.characterId || '',
+      })
+    } else {
+      draftsKept.push({ date: row.date, title })
+    }
+  }
+
+  return {
+    fromDate,
+    publishMode: settings.publishMode,
+    cleared,
+    refreshed,
+    approvedPublic,
+    draftsKept,
+    ...(opts?.promoteDrafts ? { promoted } : {}),
+  }
+}
+
+/** Run syncPublicFromApproved once per DB (idempotent via app_settings). */
+export async function ensurePublicSyncOnce(
+  fromDate = PUBLIC_SYNC_FROM_DATE,
+): Promise<PublicSyncReport | null> {
+  // Local PGlite (no DATABASE_URL) skips auto cutover so smoke/dev Mode A still works.
+  if (!process.env.DATABASE_URL?.trim()) return null
+
+  try {
+    const existing = await sql<{ value: unknown }>(
+      `select value from app_settings where key = $1`,
+      [PUBLIC_SYNC_SETTINGS_KEY],
+    )
+    if (existing[0]) return null
+  } catch {
+    return null
+  }
+
+  const report = await syncPublicFromApproved(fromDate)
+  await sql(
+    `insert into app_settings (key, value, updated_at)
+     values ($1, $2::jsonb, now())
+     on conflict (key) do update
+       set value = excluded.value, updated_at = now()`,
+    [
+      PUBLIC_SYNC_SETTINGS_KEY,
+      JSON.stringify({
+        fromDate,
+        appliedAt: new Date().toISOString(),
+        cleared: report.cleared.map((c) => c.date),
+        refreshed: report.refreshed.map((r) => r.date),
+        approvedPublic: report.approvedPublic.map((a) => a.date),
+      }),
+    ],
+  )
+  return report
 }
 
 /**

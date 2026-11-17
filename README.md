@@ -12,6 +12,8 @@
 - **往日繪卷**：`/daily/archive` 與日期選擇，重讀已封存故事與其插畫
 - **PWA**：可加到主畫面（manifest + icons + 輕量 service worker；`/api/*` 不攔截）
 - **管理後台** `/admin`：隔日繪卷預先生成（文字＋插畫預覽／可重產）、批改全部文稿後核准、留言回覆與刪除（需 `ADMIN_USERNAME`／`ADMIN_PASSWORD`；缺密鑰則後台關閉，公開站仍可用）
+  - **發布模式**：模式 A（預產可公開）／模式 B（必須核准；sample／grok 不上街）
+  - **同步公開**：設定頁「同步公開（清未核准）」→ `POST /api/admin/story/sync-public`（自 `2026-11-18` 鎖定模式 B、刪 sample／grok、刷新舊公仔核准稿）。亦可「核准草稿並同步」。發布後首次 `/api/daily` 或 cron 會自動跑一次同等同步（`public_sync_v1`）。
 - **留言**：可分享反思；細字標明規則（禁止粗口等，違規由版主刪除）
 - **Grok 生成（可自動化）**：設定 `XAI_API_KEY` 後由 Grok 生成當日故事與插畫；未設定則示範故事＋預設英雄圖
   - 排程端點：`POST /api/cron/daily-story`（需 `CRON_SECRET`）— **每天一次**文字＋插畫（約 US$0.04–0.05／圖，不在每次頁面瀏覽觸發）
@@ -32,6 +34,8 @@ env -u DATABASE_URL npm run smoke
 ```
 
 發布環境請在 Cursor App Secrets 設定 `ADMIN_USERNAME`（建議 `ADMIN`）、`ADMIN_PASSWORD`，以及既有的 `XAI_API_KEY`／`CRON_SECRET`。
+
+重複「同步公開」步驟見 `docs` 代理商店說明，或後台設定頁按鈕／`POST /api/admin/story/sync-public`。
 
 ## 技術
 

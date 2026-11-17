@@ -46,6 +46,7 @@ if (adminMe.status === 503) {
     ok('admin mode a', await page.getByRole('button', { name: /模式 A/ }).isVisible())
     ok('admin mode b', await page.getByRole('button', { name: /模式 B/ }).isVisible())
     ok('admin image manual', await page.getByRole('button', { name: '人手 GEN 圖' }).isVisible())
+    ok('admin sync public', await page.getByRole('button', { name: /同步公開/ }).isVisible())
     await page.getByRole('button', { name: /模式 B/ }).click()
     await page.locator('.admin-status').filter({ hasText: /必須核准/ }).waitFor({
       state: 'visible',
