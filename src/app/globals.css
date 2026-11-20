@@ -1352,6 +1352,34 @@ button.back-link {
   border: 0;
 }
 
+.daily-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.daily-hero-skeleton {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  max-height: 70vh;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  background-size: 200% 100%;
+  animation: daily-skeleton-shine 1.2s ease-in-out infinite;
+}
+
+@keyframes daily-skeleton-shine {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .daily-block {
   padding: 1.25rem 1.5rem;
   border-top: 1px solid var(--line);
@@ -1727,11 +1755,44 @@ button.back-link {
   padding-inline: 1rem;
 }
 
+.bible-search-scope-bar {
+  margin-top: 0.65rem;
+}
+
+.bible-search-scope-toggle {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.bible-search-scope-toggle.is-open {
+  border-color: rgba(212, 165, 116, 0.45);
+  background: rgba(212, 165, 116, 0.1);
+}
+
+.bible-search-scope-current {
+  color: var(--gold-soft);
+  font-size: 0.84rem;
+}
+
+.bible-search-scope-panel {
+  margin-top: 0.55rem;
+  padding-top: 0.15rem;
+}
+
 .bible-search-scopes {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-top: 0.7rem;
 }
 
 .bible-search-filters {

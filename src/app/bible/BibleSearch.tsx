@@ -41,12 +41,24 @@ export function BibleSearch({ books, defaultBookId, defaultChapter, compact }: P
   const [truncated, setTruncated] = useState(false)
   const [status, setStatus] = useState('')
   const [searched, setSearched] = useState(false)
+  const [scopeOpen, setScopeOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const selectedBook = useMemo(
     () => books.find((b) => b.id === bookId) || books[0],
     [books, bookId],
   )
+
+  const scopeSummary = useMemo(() => {
+    if (kind === 'all') return '全書'
+    if (kind === 'OT') return '舊約'
+    if (kind === 'NT') return '新約'
+    if (kind === 'book') return selectedBook?.name || '本卷'
+    if (kind === 'range' && selectedBook) {
+      return `${selectedBook.name} ${chapterFrom}–${chapterTo} 章`
+    }
+    return '章節範圍'
+  }, [kind, selectedBook, chapterFrom, chapterTo])
 
   useEffect(() => {
     prefetchBibleSearchAssets()
@@ -139,62 +151,79 @@ export function BibleSearch({ books, defaultBookId, defaultChapter, compact }: P
         </div>
       </form>
 
-      <div className="bible-search-scopes" role="radiogroup" aria-label="搜尋範圍">
-        {SCOPE_LABELS.map((item) => (
-          <button
-            key={item.kind}
-            type="button"
-            role="radio"
-            aria-checked={kind === item.kind}
-            className={kind === item.kind ? 'choice-chip active' : 'choice-chip'}
-            onClick={() => setKind(item.kind)}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="bible-search-scope-bar">
+        <button
+          type="button"
+          className={`bible-search-scope-toggle${scopeOpen ? ' is-open' : ''}`}
+          aria-expanded={scopeOpen}
+          aria-controls="bible-search-scope-panel"
+          onClick={() => setScopeOpen((open) => !open)}
+        >
+          <span>選擇範圍</span>
+          <span className="bible-search-scope-current">{scopeSummary}</span>
+        </button>
       </div>
 
-      {kind === 'book' || kind === 'range' ? (
-        <div className="bible-search-filters">
-          <label>
-            書卷
-            <select
-              value={bookId}
-              onChange={(e) => setBookId(e.target.value)}
-              aria-label="搜尋書卷"
-            >
-              {books.map((book) => (
-                <option key={book.id} value={book.id}>
-                  {book.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {kind === 'range' && selectedBook ? (
-            <>
+      {scopeOpen ? (
+        <div id="bible-search-scope-panel" className="bible-search-scope-panel">
+          <div className="bible-search-scopes" role="radiogroup" aria-label="搜尋範圍">
+            {SCOPE_LABELS.map((item) => (
+              <button
+                key={item.kind}
+                type="button"
+                role="radio"
+                aria-checked={kind === item.kind}
+                className={kind === item.kind ? 'choice-chip active' : 'choice-chip'}
+                onClick={() => setKind(item.kind)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {kind === 'book' || kind === 'range' ? (
+            <div className="bible-search-filters">
               <label>
-                起
-                <input
-                  type="number"
-                  min={1}
-                  max={selectedBook.chapterCount}
-                  value={chapterFrom}
-                  onChange={(e) => setChapterFrom(Number(e.target.value) || 1)}
-                  aria-label="起始章"
-                />
+                書卷
+                <select
+                  value={bookId}
+                  onChange={(e) => setBookId(e.target.value)}
+                  aria-label="搜尋書卷"
+                >
+                  {books.map((book) => (
+                    <option key={book.id} value={book.id}>
+                      {book.name}
+                    </option>
+                  ))}
+                </select>
               </label>
-              <label>
-                迄
-                <input
-                  type="number"
-                  min={1}
-                  max={selectedBook.chapterCount}
-                  value={chapterTo}
-                  onChange={(e) => setChapterTo(Number(e.target.value) || 1)}
-                  aria-label="結束章"
-                />
-              </label>
-            </>
+              {kind === 'range' && selectedBook ? (
+                <>
+                  <label>
+                    起
+                    <input
+                      type="number"
+                      min={1}
+                      max={selectedBook.chapterCount}
+                      value={chapterFrom}
+                      onChange={(e) => setChapterFrom(Number(e.target.value) || 1)}
+                      aria-label="起始章"
+                    />
+                  </label>
+                  <label>
+                    迄
+                    <input
+                      type="number"
+                      min={1}
+                      max={selectedBook.chapterCount}
+                      value={chapterTo}
+                      onChange={(e) => setChapterTo(Number(e.target.value) || 1)}
+                      aria-label="結束章"
+                    />
+                  </label>
+                </>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

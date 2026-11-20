@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { AudioControls } from '../../components/AudioControls'
 import { CommentSection } from '../../components/CommentSection'
 import type { DailyStory } from '../../data/dailyStories'
-import { DAILY_ARCHIVE_START, dateKey, getSampleStoryForDate } from '../../data/dailyStories'
+import { DAILY_ARCHIVE_START, dateKey } from '../../data/dailyStories'
 import { useAudioSettings } from '../../context/AudioSettings'
 
 const DEFAULT_HERO = '/daily/default-hero.jpg'
@@ -20,10 +20,8 @@ function DailyClientInner() {
   const viewDate = requested && /^\d{4}-\d{2}-\d{2}$/.test(requested) ? requested : today
   const isToday = viewDate === today
 
-  const [story, setStory] = useState<DailyStory>(() => ({
-    ...getSampleStoryForDate(viewDate),
-    imageUrl: DEFAULT_HERO,
-  }))
+  // Do not seed with sample/default-hero — that flashed the old day-one art before today's API payload.
+  const [story, setStory] = useState<DailyStory | null>(null)
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
   const [heroLoaded, setHeroLoaded] = useState(false)
@@ -33,12 +31,14 @@ function DailyClientInner() {
     setLoading(true)
     setMissing(false)
     setHeroLoaded(false)
+    setStory(null)
     ;(async () => {
       try {
         const res = await fetch(`/api/daily?date=${encodeURIComponent(viewDate)}`)
         if (res.status === 404) {
           if (!cancelled) {
             setMissing(true)
+            setStory(null)
             setLoading(false)
           }
           return
@@ -49,6 +49,7 @@ function DailyClientInner() {
         }
         if (!cancelled && (data.unavailable || !data.story)) {
           setMissing(true)
+          setStory(null)
           setLoading(false)
           return
         }
@@ -57,9 +58,13 @@ function DailyClientInner() {
             ...data.story,
             imageUrl: data.story.imageUrl || DEFAULT_HERO,
           })
+          setMissing(false)
         }
       } catch {
-        /* keep fallback story */
+        if (!cancelled) {
+          setMissing(true)
+          setStory(null)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -69,7 +74,7 @@ function DailyClientInner() {
     }
   }, [viewDate])
 
-  const heroSrc = story.imageUrl || DEFAULT_HERO
+  const heroSrc = story?.imageUrl || ''
 
   return (
     <main className="page daily-page">
@@ -79,12 +84,19 @@ function DailyClientInner() {
         </Link>
         <div className="watch-meta">
           <span>每日繪卷 · {viewDate}</span>
-          <strong>{loading ? '載入中…' : missing ? '尚無此日故事' : story.title}</strong>
+          <strong>
+            {loading ? '載入今日故事…' : missing || !story ? '尚無此日故事' : story.title}
+          </strong>
         </div>
         <AudioControls />
       </header>
 
-      {missing ? (
+      {loading ? (
+        <section className="daily-block daily-loading" aria-busy="true" aria-live="polite">
+          <div className="daily-hero-skeleton" aria-hidden />
+          <p>正在載入今日繪卷…</p>
+        </section>
+      ) : missing || !story ? (
         <section className="daily-block">
           <p className="daily-story">
             {isToday
@@ -190,7 +202,10 @@ export function DailyClient() {
     <Suspense
       fallback={
         <main className="page daily-page">
-          <p className="daily-block">載入中…</p>
+          <section className="daily-block daily-loading" aria-busy="true">
+            <div className="daily-hero-skeleton" aria-hidden />
+            <p>載入今日故事…</p>
+          </section>
         </main>
       }
     >

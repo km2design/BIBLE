@@ -195,6 +195,26 @@ ok('no doll speaker framing', (await page.getByText(/公仔讀經|把智慧說�
 await page.getByRole('link', { name: '打開今日故事' }).first().click()
 await page.waitForURL('**/daily')
 ok('daily route', page.url().includes('/daily'))
+await page.getByRole('heading', { level: 1 }).waitFor({ state: 'visible', timeout: 15000 })
+const dailyBoot = await page.evaluate(async () => {
+  const res = await fetch('/api/daily')
+  const data = await res.json()
+  const img = document.querySelector('.daily-hero-media')
+  return {
+    apiDate: data?.story?.date || null,
+    imgSrc: img?.getAttribute('src') || '',
+    title: data?.story?.title || '',
+  }
+})
+ok(
+  'daily loads today story',
+  Boolean(dailyBoot.apiDate) &&
+    dailyBoot.apiDate === new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date()) &&
+    !dailyBoot.imgSrc.includes('2026-11-16') &&
+    (dailyBoot.imgSrc.includes(`date=${dailyBoot.apiDate}`) ||
+      dailyBoot.imgSrc.includes('/daily/default-hero.jpg')),
+  JSON.stringify(dailyBoot),
+)
 ok('daily wisdom', await page.getByText('人生智慧').isVisible())
 ok('daily devotion', await page.getByText('當日靈修反思').isVisible())
 ok('comment rules', await page.getByText('留言規則').isVisible())
@@ -364,6 +384,9 @@ await page.goto(`${base}/bible`, { waitUntil: 'networkidle' })
 ok('bible catalog', await page.getByRole('heading', { name: '和合本聖經' }).isVisible())
 ok('bible ot books', await page.getByText('創世記').isVisible())
 ok('bible search form', await page.getByLabel('搜尋經文').isVisible())
+ok('bible scope collapsed', (await page.getByRole('radio', { name: '新約' }).count()) === 0)
+await page.getByRole('button', { name: /選擇範圍/ }).click()
+ok('bible scope opens', await page.getByRole('radio', { name: '新約' }).isVisible())
 await page.getByLabel('搜尋經文').fill('愛 世人')
 await page.getByRole('radio', { name: '新約' }).click()
 await page.getByRole('button', { name: '搜尋', exact: true }).click()
