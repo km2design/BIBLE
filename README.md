@@ -6,6 +6,9 @@
 
 - **和合本聖經**：完整 66 卷繁體新標點和合本，可自由選舊約／新約書卷 → 章 → 節
   - 來源：eBible.org `cmn-cu89t`（Public Domain），經 midvash/bible-data 整理
+  - 本地資產：`public/bible/cuv/`（目錄 + 66 卷 JSON + `search-corpus.json`），閱讀／搜尋皆走同源靜態檔（`cache: 'force-cache'`），不打遠端經文 API
+  - 搜尋：全書／舊約／新約／本卷／章節範圍；結果連到章節 `#vN`
+  - 重建搜尋語料：`npm run bible:corpus`
   - 署名見閱讀頁與 `public/bible/cuv/SOURCE.md`
 - **每日繪卷**：故事驅動插畫＋角色走進日常情境，帶出提醒、警告、勸戒、鼓勵、安慰、同理、名言與反思
 - **當日靈修**：每篇故事附默想與短禱
