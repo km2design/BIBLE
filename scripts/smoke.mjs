@@ -47,6 +47,25 @@ if (adminMe.status === 503) {
     ok('admin mode b', await page.getByRole('button', { name: /模式 B/ }).isVisible())
     ok('admin image manual', await page.getByRole('button', { name: '人手 GEN 圖' }).isVisible())
     ok('admin sync public', await page.getByRole('button', { name: /同步公開/ }).isVisible())
+    await page.getByRole('button', { name: '往日＋統計' }).click()
+    await page.getByText('用量統計').waitFor({ state: 'visible', timeout: 10000 })
+    ok('admin archive tab', await page.getByText('全部往日故事').isVisible())
+    const archiveApi = await page.evaluate(async () => {
+      const res = await fetch('/api/admin/archive')
+      return { status: res.status, body: await res.json() }
+    })
+    ok(
+      'admin archive api',
+      archiveApi.status === 200 &&
+        Array.isArray(archiveApi.body.items) &&
+        typeof archiveApi.body.stats?.totalViews === 'number',
+      JSON.stringify({
+        status: archiveApi.status,
+        items: archiveApi.body.items?.length,
+        views: archiveApi.body.stats?.totalViews,
+      }),
+    )
+    await page.getByRole('button', { name: '設定' }).click()
     await page.getByRole('button', { name: /模式 B/ }).click()
     await page.locator('.admin-status').filter({ hasText: /必須核准/ }).waitFor({
       state: 'visible',

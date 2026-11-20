@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { DailyStory, WisdomKind } from '../../data/dailyStories'
 import type { AdminAppSettings, PublishMode, WeekStoryItem } from '../../lib/adminTypes'
 
-type Tab = 'settings' | 'day' | 'week' | 'comments'
+type Tab = 'settings' | 'day' | 'week' | 'comments' | 'archive'
 
 type AdminComment = {
   id: string
@@ -15,6 +15,24 @@ type AdminComment = {
   is_admin: boolean
   parent_id: string | null
   created_at: string
+}
+
+type ArchiveItem = {
+  date: string
+  title: string
+  source: string
+  wisdomKind: string
+  hasImage: boolean
+  views: number
+  comments: number
+  commentsHidden: number
+}
+
+type UsageStats = {
+  totalViews: number
+  totalComments: number
+  totalStories: number
+  days: { date: string; views: number; comments: number; title: string | null }[]
 }
 
 const KINDS: WisdomKind[] = ['反思', '名言', '提醒', '警告', '勸戒', '鼓勵', '安慰', '同理']
@@ -58,6 +76,10 @@ export function AdminClient() {
     autoGenImage: false,
   })
   const [weekItems, setWeekItems] = useState<WeekStoryItem[]>([])
+  const [archiveItems, setArchiveItems] = useState<ArchiveItem[]>([])
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null)
+  const [archiveOpenDate, setArchiveOpenDate] = useState<string | null>(null)
+  const [archiveComments, setArchiveComments] = useState<AdminComment[]>([])
 
   const refreshMe = useCallback(async () => {
     const res = await fetch('/api/admin/me')
@@ -137,6 +159,27 @@ export function AdminClient() {
     if (res.ok) setComments(data.comments || [])
   }, [])
 
+  const loadArchive = useCallback(async () => {
+    const res = await fetch('/api/admin/archive?limit=120&days=30')
+    const data = (await res.json()) as {
+      items?: ArchiveItem[]
+      stats?: UsageStats
+      error?: string
+    }
+    if (!res.ok) {
+      setStatus(data.error || '載入往日／統計失敗')
+      return
+    }
+    setArchiveItems(data.items || [])
+    setUsageStats(data.stats || null)
+  }, [])
+
+  const loadArchiveComments = useCallback(async (date: string) => {
+    const res = await fetch(`/api/admin/comments?date=${encodeURIComponent(date)}&all=1`)
+    const data = (await res.json()) as { comments?: AdminComment[] }
+    if (res.ok) setArchiveComments(data.comments || [])
+  }, [])
+
   useEffect(() => {
     if (!authed) return
     void loadSettings()
@@ -151,8 +194,21 @@ export function AdminClient() {
     } else if (tab === 'day') {
       const date = editDate || tomorrow || today
       if (date) void loadStory(date)
+    } else if (tab === 'archive') {
+      void loadArchive()
     }
-  }, [authed, tab, today, tomorrow, editDate, commentDate, loadStory, loadComments, loadWeek])
+  }, [
+    authed,
+    tab,
+    today,
+    tomorrow,
+    editDate,
+    commentDate,
+    loadStory,
+    loadComments,
+    loadWeek,
+    loadArchive,
+  ])
 
   async function login(e: React.FormEvent) {
     e.preventDefault()
@@ -509,6 +565,13 @@ export function AdminClient() {
         >
           留言
         </button>
+        <button
+          type="button"
+          className={tab === 'archive' ? 'active' : undefined}
+          onClick={() => setTab('archive')}
+        >
+          往日＋統計
+        </button>
       </nav>
 
       {status ? <p className="admin-status">{status}</p> : null}
@@ -799,6 +862,151 @@ export function AdminClient() {
                     </>
                   ) : null}
                 </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {tab === 'archive' ? (
+        <section className="admin-archive">
+          <h2 className="admin-section-title">用量統計</h2>
+          <p className="admin-lead">
+            瀏覽數：公開成功讀取當日／往日繪卷時累計（同一 IP 每小時同一日最多計 1 次）。留言數不含已刪。
+          </p>
+          <div className="admin-stat-grid">
+            <div className="admin-stat-card">
+              <span>繪卷瀏覽（累計）</span>
+              <strong>{usageStats?.totalViews ?? 0}</strong>
+            </div>
+            <div className="admin-stat-card">
+              <span>留言（累計）</span>
+              <strong>{usageStats?.totalComments ?? 0}</strong>
+            </div>
+            <div className="admin-stat-card">
+              <span>故事筆數</span>
+              <strong>{usageStats?.totalStories ?? 0}</strong>
+            </div>
+          </div>
+
+          <h3 className="admin-section-title">近 30 日</h3>
+          <ul className="admin-stat-days">
+            {(usageStats?.days || []).map((day) => {
+              const maxViews = Math.max(1, ...(usageStats?.days.map((d) => d.views) || [1]))
+              const width = Math.round((day.views / maxViews) * 100)
+              return (
+                <li key={day.date}>
+                  <button
+                    type="button"
+                    className="admin-stat-day"
+                    onClick={() => {
+                      setCommentDate(day.date)
+                      setTab('comments')
+                    }}
+                  >
+                    <span className="admin-stat-day-meta">
+                      <strong>{day.date}</strong>
+                      <em>{day.title || '（無故事）'}</em>
+                    </span>
+                    <span className="admin-stat-day-nums">
+                      瀏覽 {day.views} · 留言 {day.comments}
+                    </span>
+                    <span className="admin-stat-bar" aria-hidden>
+                      <i style={{ width: `${width}%` }} />
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+
+          <div className="admin-actions" style={{ marginTop: '1rem' }}>
+            <button type="button" className="btn soft" onClick={() => void loadArchive()} disabled={busy}>
+              重新整理
+            </button>
+          </div>
+
+          <h2 className="admin-section-title">全部往日故事</h2>
+          <ul className="admin-archive-list">
+            {archiveItems.map((item) => (
+              <li key={item.date}>
+                <div className="admin-archive-row">
+                  <div>
+                    <strong>
+                      {item.date} · {item.title}
+                    </strong>
+                    <p>
+                      {item.source}
+                      {item.wisdomKind ? ` · ${item.wisdomKind}` : ''}
+                      {item.hasImage ? ' · 有圖' : ' · 無圖'} · 瀏覽 {item.views} · 留言{' '}
+                      {item.comments}
+                      {item.commentsHidden ? `（已刪 ${item.commentsHidden}）` : ''}
+                    </p>
+                  </div>
+                  <div className="admin-actions">
+                    {item.date >= today ? (
+                      <button
+                        type="button"
+                        className="btn soft"
+                        onClick={() => {
+                          setEditDate(item.date)
+                          setTab('day')
+                        }}
+                      >
+                        編輯
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn soft"
+                        onClick={() => {
+                          setCommentDate(item.date)
+                          setTab('comments')
+                        }}
+                      >
+                        留言管理
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn soft"
+                      onClick={() => {
+                        const next = archiveOpenDate === item.date ? null : item.date
+                        setArchiveOpenDate(next)
+                        if (next) void loadArchiveComments(next)
+                        else setArchiveComments([])
+                      }}
+                    >
+                      {archiveOpenDate === item.date ? '收合留言' : '展開留言'}
+                    </button>
+                    <Link className="btn soft" href={`/daily?date=${encodeURIComponent(item.date)}`}>
+                      公開頁
+                    </Link>
+                  </div>
+                </div>
+                {archiveOpenDate === item.date ? (
+                  <ul className="admin-comment-list">
+                    {archiveComments.length === 0 ? (
+                      <li>
+                        <p>此日暫無留言。</p>
+                      </li>
+                    ) : (
+                      archiveComments.map((c) => (
+                        <li key={c.id} className={c.hidden ? 'is-hidden' : undefined}>
+                          <div className="admin-comment-head">
+                            <strong>
+                              #{c.id} {c.nickname}
+                              {c.is_admin ? ' · 版主' : ''}
+                              {c.hidden ? ' · 已刪' : ''}
+                            </strong>
+                            <time>{c.created_at}</time>
+                          </div>
+                          <p>{c.body}</p>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>

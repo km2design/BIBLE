@@ -2093,6 +2093,114 @@ button.back-link {
   margin-bottom: 0.85rem;
 }
 
+.admin-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+}
+
+.admin-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-stat-card span {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.admin-stat-card strong {
+  font-size: 1.45rem;
+  color: var(--gold-soft);
+}
+
+.admin-stat-days,
+.admin-archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.admin-stat-day {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.16);
+  color: var(--ink);
+}
+
+.admin-stat-day-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-stat-day-meta em {
+  font-style: normal;
+  color: var(--ink-muted);
+  font-size: 0.86rem;
+}
+
+.admin-stat-day-nums {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}
+
+.admin-stat-bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.admin-stat-bar i {
+  display: block;
+  height: 100%;
+  background: rgba(212, 165, 116, 0.7);
+}
+
+.admin-archive-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-archive-row p {
+  margin: 0.25rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.84rem;
+}
+
+@media (max-width: 520px) {
+  .admin-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-settings .admin-section-title {
   margin-top: 0.5rem;
 }
