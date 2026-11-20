@@ -213,15 +213,19 @@ const dailyApi = await page.evaluate(async () => {
   return res.json()
 })
 ok('daily story title', Boolean(dailyApi?.story?.title), String(dailyApi?.story?.title || ''))
-if (dailyApi?.story?.date === '2026-11-16') {
-  ok('day-one sample title', dailyApi.story.title === '一句夠用', dailyApi.story.title)
-}
 const historyApi = await page.evaluate(async () => {
   const res = await fetch('/api/daily/history')
   return res.json()
 })
-const early = (historyApi.items || []).filter((i) => i.date < '2026-11-16')
+const early = (historyApi.items || []).filter((i) => i.date < '2026-11-18')
 ok('archive starts at day one', early.length === 0, JSON.stringify(early))
+const preCutover = await page.evaluate(async () => {
+  const a = await fetch('/api/daily?date=2026-11-16')
+  const b = await fetch('/api/daily?date=2026-11-17')
+  return { d16: a.status, d17: b.status }
+})
+ok('pre-cutover 16 gone', preCutover.d16 === 404, JSON.stringify(preCutover))
+ok('pre-cutover 17 gone', preCutover.d17 === 404, JSON.stringify(preCutover))
 const heroImg = page.locator('.daily-hero-media')
 await heroImg.waitFor({ state: 'visible', timeout: 15000 })
 ok('daily story hero image', await heroImg.isVisible())

@@ -133,7 +133,7 @@ const pool: Omit<DailyStory, 'date'>[] = [
 ]
 
 /** First day of the illustrated daily archive (Asia/Hong_Kong). */
-export const DAILY_ARCHIVE_START = '2026-11-16'
+export const DAILY_ARCHIVE_START = '2026-11-18'
 
 /** Calendar date in Asia/Hong_Kong (YYYY-MM-DD). */
 export function dateKey(d = new Date()): string {
@@ -171,11 +171,6 @@ export function weekDatesFrom(start = dateKey()): string[] {
 }
 
 export function getSampleStoryForDate(date = dateKey()): DailyStory {
-  // Day one of the archive is pinned to 「一句夠用」; later days rotate the pool.
-  if (date === DAILY_ARCHIVE_START) {
-    const dayOne = pool.find((s) => s.title === '一句夠用') ?? pool[5]
-    return { ...dayOne, date, sample: true }
-  }
   const dayNum = Math.floor(new Date(date + 'T12:00:00').getTime() / 86_400_000)
   const base = pool[((dayNum % pool.length) + pool.length) % pool.length]
   return { ...base, date, sample: true }
