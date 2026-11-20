@@ -1,0 +1,26 @@
+
+dist
+dist-ssr
+.DS_Store
+# Editor directories and files
+.idea
+lerna-debug.log*
+*.local
+*.log
+logs
+# Logs
+.next
+*.njsproj
+node_modules
+npm-debug.log*
+*.ntvs*
+out
+pnpm-debug.log*
+*.sln
+*.suo
+*.sw?
+tsconfig.tsbuildinfo
+.vscode/*
+!.vscode/extensions.json
+yarn-debug.log*
+yarn-error.log*
