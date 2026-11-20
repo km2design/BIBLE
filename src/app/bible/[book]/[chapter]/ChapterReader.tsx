@@ -7,13 +7,17 @@ import {
   loadBibleIndex,
   neighborBook,
   type BibleBook,
+  type BibleBookMeta,
   type BibleIndex,
 } from '../../../../data/bible'
+import { BibleSearch } from '../../BibleSearch'
 
 export function ChapterReader({ bookId, chapter }: { bookId: string; chapter: number }) {
   const [book, setBook] = useState<BibleBook | null>(null)
   const [index, setIndex] = useState<BibleIndex | null>(null)
+  const [books, setBooks] = useState<BibleBookMeta[]>([])
   const [error, setError] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -23,6 +27,7 @@ export function ChapterReader({ bookId, chapter }: { bookId: string; chapter: nu
         if (!cancelled) {
           setBook(b)
           setIndex(idx)
+          setBooks(idx.books)
         }
       } catch {
         if (!cancelled) setError('無法載入本章經文。')
@@ -49,6 +54,21 @@ export function ChapterReader({ bookId, chapter }: { bookId: string; chapter: nu
     else if (next) nextHref = `/bible/${next.id}/1`
     return { prevHref, nextHref }
   }, [index, book, chapter])
+
+  useEffect(() => {
+    if (!chapterData) return
+    const hash = typeof window !== 'undefined' ? window.location.hash : ''
+    if (!hash.startsWith('#v')) return
+    const id = hash.slice(1)
+    const frame = window.requestAnimationFrame(() => {
+      const el = document.getElementById(id)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('is-target')
+      window.setTimeout(() => el.classList.remove('is-target'), 2200)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [chapterData, bookId, chapter])
 
   if (error) {
     return (
@@ -82,14 +102,25 @@ export function ChapterReader({ bookId, chapter }: { bookId: string; chapter: nu
         </Link>
         <div className="watch-meta">
           <span>{book.name}</span>
-          <strong>
-            第 {chapter} 章
-          </strong>
+          <strong>第 {chapter} 章</strong>
         </div>
-        <Link href="/bible" className="text-link bible-top-link">
-          目錄
-        </Link>
+        <button
+          type="button"
+          className="text-link bible-top-link"
+          onClick={() => setShowSearch((v) => !v)}
+        >
+          {showSearch ? '收合搜尋' : '搜尋'}
+        </button>
       </header>
+
+      {showSearch && books.length ? (
+        <BibleSearch
+          books={books}
+          defaultBookId={book.id}
+          defaultChapter={chapter}
+          compact
+        />
+      ) : null}
 
       <article className="bible-verses">
         {chapterData.v.map((verse) => (

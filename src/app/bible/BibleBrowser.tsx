@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   booksByTestament,
   loadBibleIndex,
+  prefetchBibleSearchAssets,
   type BibleBookMeta,
   type BibleIndex,
   type Testament,
 } from '../../data/bible'
+import { BibleSearch } from './BibleSearch'
 
 export function BibleBrowser() {
   const [index, setIndex] = useState<BibleIndex | null>(null)
@@ -16,6 +18,7 @@ export function BibleBrowser() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    prefetchBibleSearchAssets()
     let cancelled = false
     ;(async () => {
       try {
@@ -42,10 +45,12 @@ export function BibleBrowser() {
         <h1>和合本聖經</h1>
         <p>
           {index
-            ? `${index.fullName} · ${index.stats.books} 卷 · ${index.stats.chapters} 章`
+            ? `${index.fullName} · ${index.stats.books} 卷 · ${index.stats.chapters} 章 · 本地經文`
             : '載入目錄中…'}
         </p>
       </header>
+
+      {index ? <BibleSearch books={index.books} /> : null}
 
       <div className="bible-tabs" role="tablist" aria-label="約別">
         <button

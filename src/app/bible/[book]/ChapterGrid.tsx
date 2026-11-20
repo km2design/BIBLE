@@ -2,18 +2,28 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { loadBibleBook, type BibleBook } from '../../../data/bible'
+import {
+  loadBibleBook,
+  loadBibleIndex,
+  type BibleBook,
+  type BibleBookMeta,
+} from '../../../data/bible'
+import { BibleSearch } from '../BibleSearch'
 
 export function ChapterGrid({ bookId }: { bookId: string }) {
   const [book, setBook] = useState<BibleBook | null>(null)
+  const [books, setBooks] = useState<BibleBookMeta[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const data = await loadBibleBook(bookId)
-        if (!cancelled) setBook(data)
+        const [data, index] = await Promise.all([loadBibleBook(bookId), loadBibleIndex()])
+        if (!cancelled) {
+          setBook(data)
+          setBooks(index.books)
+        }
       } catch {
         if (!cancelled) setError('找不到這卷書。')
       }
@@ -58,6 +68,8 @@ export function ChapterGrid({ bookId }: { bookId: string }) {
           {book.testament === 'OT' ? '舊約' : '新約'} · 共 {book.chapterCount} 章
         </p>
       </header>
+
+      {books.length ? <BibleSearch books={books} defaultBookId={book.id} compact /> : null}
 
       <div className="bible-chapter-grid">
         {Array.from({ length: book.chapterCount }, (_, i) => i + 1).map((n) => (
