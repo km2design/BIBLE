@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { DAILY_ARCHIVE_START, dateKey } from '../../../data/dailyStories'
 import { getArchivedStory, getDailyStory } from '../../../lib/grokDaily'
+import { recordDailyStoryView } from '../../../lib/pageViews'
 import { clientIp, takeRateLimit } from '../../../lib/rateLimit'
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +35,7 @@ export async function GET(request: Request) {
         unavailable: true,
       })
     }
+    void recordDailyStoryView(request, today)
     return NextResponse.json({
       story,
       source: source === 'sample' ? 'sample' : 'cached',
@@ -50,6 +52,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: '此日期尚無封存故事' }, { status: 404 })
   }
 
+  void recordDailyStoryView(request, requested)
   return NextResponse.json({
     story: archived.story,
     source: archived.source === 'sample' ? 'sample' : 'cached',
