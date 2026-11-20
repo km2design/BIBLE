@@ -363,6 +363,34 @@ await page.screenshot({ path: `${out}/home_with_chaji.png` })
 await page.goto(`${base}/bible`, { waitUntil: 'networkidle' })
 ok('bible catalog', await page.getByRole('heading', { name: '和合本聖經' }).isVisible())
 ok('bible ot books', await page.getByText('創世記').isVisible())
+ok('bible search form', await page.getByLabel('搜尋經文').isVisible())
+await page.getByLabel('搜尋經文').fill('愛 世人')
+await page.getByRole('radio', { name: '新約' }).click()
+await page.getByRole('button', { name: '搜尋', exact: true }).click()
+await page.getByText(/約翰福音 3:16/).waitFor({ state: 'visible', timeout: 20000 })
+ok('bible search hit', await page.getByText(/約翰福音 3:16/).first().isVisible())
+const cuvLocal = await page.evaluate(async () => {
+  const index = await (await fetch('/bible/cuv/index.json', { cache: 'force-cache' })).json()
+  const corpus = await (await fetch('/bible/cuv/search-corpus.json', { cache: 'force-cache' })).json()
+  const gen = await (await fetch('/bible/cuv/books/Gen.json', { cache: 'force-cache' })).json()
+  return {
+    books: index?.stats?.books,
+    chapters: index?.stats?.chapters,
+    verses: index?.stats?.verses,
+    corpusVerses: corpus?.stats?.verses,
+    genChapters: gen?.chapters?.length,
+    sameOrigin: true,
+  }
+})
+ok('cuv local index complete', cuvLocal.books === 66 && cuvLocal.chapters === 1189 && cuvLocal.verses === 31021, JSON.stringify(cuvLocal))
+ok('cuv search corpus complete', cuvLocal.corpusVerses === 31021, JSON.stringify(cuvLocal))
+ok('cuv book asset local', cuvLocal.genChapters === 50, JSON.stringify(cuvLocal))
+await page.screenshot({ path: `${out}/bible_search.png`, fullPage: true })
+await page.getByRole('link', { name: /約翰福音 3:16/ }).click()
+await page.waitForURL('**/bible/John/3**')
+await page.getByText(/上帝愛世人/).waitFor({ state: 'visible', timeout: 15000 })
+ok('bible search opens reader', await page.getByText(/上帝愛世人/).isVisible())
+await page.goto(`${base}/bible`, { waitUntil: 'networkidle' })
 await page.getByRole('tab', { name: '新約' }).click()
 ok('bible nt books', await page.getByText('約翰福音').isVisible())
 await page.getByRole('link', { name: /約翰福音/ }).click()

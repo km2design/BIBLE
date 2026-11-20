@@ -1,7 +1,7 @@
 /* Light shell service worker for 光道 PWA installability.
  * Does not intercept /api/* — keeps daily/comments/cron network-only.
  */
-const CACHE = 'guangdao-shell-v1'
+const CACHE = 'guangdao-shell-v2'
 const PRECACHE = [
   '/',
   '/daily',
@@ -40,6 +40,7 @@ function isStaticAsset(url) {
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/icons/') ||
     url.pathname.startsWith('/audio/') ||
+    url.pathname.startsWith('/bible/cuv/') ||
     url.pathname === '/favicon.svg' ||
     url.pathname === '/apple-touch-icon.png' ||
     url.pathname.endsWith('.webmanifest') ||
