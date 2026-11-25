@@ -1,7 +1,9 @@
 # 每天香港時間約 00:10 自動觸發 Grok 生成今日故事（寫入 App 快取）
-# 請在 GitHub repo Settings → Secrets 設定：
+# 請在 GitHub repo Settings → Secrets and variables → Actions 設定：
 #   CRON_SECRET  — 與 Cursor App 綁定的同名密鑰一致
 #   APP_URL      — 已發布 App 網址，例如 https://guangdao.apps.grok.bot
+# 兩者缺一不可。首次上線請用 workflow_dispatch 手動 Run 驗證（應回 200 JSON）。
+# 注意：Mode B 下 cron 只寫草稿／插畫；公開仍需 Admin「儲存核准」。
 name: Daily Grok story
 
 on:
@@ -20,8 +22,8 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
         run: |
           if [ -z "$CRON_SECRET" ] || [ -z "$APP_URL" ]; then
-            echo "Missing CRON_SECRET or APP_URL repo secrets; skip."
-            exit 0
+            echo "::error::Missing CRON_SECRET or APP_URL repo secrets. Set both under Settings → Secrets → Actions."
+            exit 1
           fi
           curl -fsS -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \

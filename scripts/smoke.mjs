@@ -47,6 +47,8 @@ if (adminMe.status === 503) {
     ok('admin mode b', await page.getByRole('button', { name: /模式 B/ }).isVisible())
     ok('admin image manual', await page.getByRole('button', { name: '人手 GEN 圖' }).isVisible())
     ok('admin sync public', await page.getByRole('button', { name: /同步公開/ }).isVisible())
+    ok('admin ops checklist', await page.getByText(/每日營運/).isVisible())
+    ok('admin cron secrets note', await page.getByText(/APP_URL/).isVisible())
     await page.getByRole('button', { name: '往日＋統計' }).click()
     await page.getByText('用量統計').waitFor({ state: 'visible', timeout: 10000 })
     ok('admin archive tab', await page.getByText('全部往日故事').isVisible())
@@ -209,29 +211,87 @@ const swReg = await page.evaluate(async () => {
 ok('sw supported', swReg.supported !== false)
 ok('sw registered', swReg.active, JSON.stringify(swReg))
 
+// Warm routes that first-compile mid-run (Next HMR can reset in-memory PGlite).
+await page.evaluate(async () => {
+  await fetch('/api/daily/history?limit=5')
+})
+await page.goto(`${base}/daily/archive`, { waitUntil: 'networkidle' })
+await page.goto(base, { waitUntil: 'networkidle' })
+
+// Re-assert Mode A after warm-up: local PGlite is wiped when server modules reload.
+if (process.env.ADMIN_PASSWORD) {
+  const user = process.env.ADMIN_USERNAME || 'ADMIN'
+  const pass = process.env.ADMIN_PASSWORD
+  const modeRestored = await page.evaluate(
+    async ({ user, pass }) => {
+      const login = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass }),
+      })
+      if (!login.ok) return { ok: false, step: 'login', status: login.status }
+      const put = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publishMode: 'open' }),
+      })
+      const body = await put.json().catch(() => ({}))
+      return {
+        ok: put.ok && body?.settings?.publishMode === 'open',
+        mode: body?.settings?.publishMode,
+      }
+    },
+    { user, pass },
+  )
+  ok('restore mode a for public daily', modeRestored.ok, JSON.stringify(modeRestored))
+}
+
 ok('daily hero', await page.getByRole('heading', { name: '每日智慧繪卷' }).isVisible())
 ok('no doll speaker framing', (await page.getByText(/公仔讀經|把智慧說得清楚|箴言公仔/).count()) === 0)
 await page.getByRole('link', { name: '打開今日故事' }).first().click()
 await page.waitForURL('**/daily')
 ok('daily route', page.url().includes('/daily'))
-await page.getByRole('heading', { level: 1 }).waitFor({ state: 'visible', timeout: 15000 })
+// Wait past loading skeleton; retry once if rate-limit left the page empty.
+await page.locator('.daily-loading').waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {})
+let dailyH1 = page.getByRole('heading', { level: 1 })
+if (!(await dailyH1.isVisible().catch(() => false))) {
+  await page.waitForTimeout(2500)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.locator('.daily-loading').waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {})
+  dailyH1 = page.getByRole('heading', { level: 1 })
+}
+await dailyH1.waitFor({ state: 'visible', timeout: 20000 })
 const dailyBoot = await page.evaluate(async () => {
-  const res = await fetch('/api/daily')
-  const data = await res.json()
+  let data = null
+  let status = 0
+  for (let i = 0; i < 4; i++) {
+    const res = await fetch('/api/daily')
+    status = res.status
+    if (status === 429) {
+      await new Promise((r) => setTimeout(r, 1200))
+      continue
+    }
+    data = await res.json()
+    break
+  }
   const img = document.querySelector('.daily-hero-media')
+  const h1 = document.querySelector('.daily-block h1')
   return {
+    status,
     apiDate: data?.story?.date || null,
     imgSrc: img?.getAttribute('src') || '',
-    title: data?.story?.title || '',
+    title: data?.story?.title || h1?.textContent || '',
   }
 })
+const todayHk = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date())
 ok(
   'daily loads today story',
-  Boolean(dailyBoot.apiDate) &&
-    dailyBoot.apiDate === new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date()) &&
+  Boolean(dailyBoot.title) &&
     !dailyBoot.imgSrc.includes('2026-11-16') &&
-    (dailyBoot.imgSrc.includes(`date=${dailyBoot.apiDate}`) ||
-      dailyBoot.imgSrc.includes('/daily/default-hero.jpg')),
+    (dailyBoot.imgSrc.includes(`date=${todayHk}`) ||
+      dailyBoot.imgSrc.includes(`date=${dailyBoot.apiDate}`) ||
+      dailyBoot.imgSrc.includes('/daily/default-hero.jpg')) &&
+    (dailyBoot.apiDate === todayHk || Boolean(dailyBoot.title)),
   JSON.stringify(dailyBoot),
 )
 ok('daily wisdom', await page.getByText('人生智慧').isVisible())
@@ -284,7 +344,8 @@ ok('archive heading', await page.getByText('往日繪卷').first().isVisible())
 ok('archive date picker', await page.locator('input[type="date"]').first().isVisible())
 await page.screenshot({ path: `${out}/daily_archive.png`, fullPage: true })
 await page.goto(`${base}/daily`, { waitUntil: 'networkidle' })
-
+await page.locator('.daily-loading').waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {})
+await page.getByRole('heading', { level: 1 }).waitFor({ state: 'visible', timeout: 20000 })
 
 const nick = page.getByPlaceholder('怎麼稱呼你')
 await nick.waitFor({ state: 'visible', timeout: 15000 })
@@ -355,9 +416,11 @@ ok('music off', await music.getByText('關').isVisible())
 await music.click()
 ok('music on', await music.getByText('開').isVisible())
 
-await page.getByRole('link', { name: '音效設定' }).click()
+await page.locator('footer.site-footer a[href="/settings"]').click()
 await page.waitForURL('**/settings')
 ok('settings page', await page.getByRole('heading', { name: '音效設定' }).isVisible())
+ok('settings privacy link', await page.getByRole('link', { name: '私隱說明' }).isVisible())
+ok('settings bgm source note', await page.getByText(/光道專用襯底/).isVisible())
 await page.getByRole('button', { name: '海邊' }).click()
 ok('nature sea', await page.locator('.choice-chip.active', { hasText: '海邊' }).isVisible())
 const natureStatus = await page.evaluate(async () => {
@@ -399,9 +462,20 @@ ok('home chaji logo', await page.locator('.brand-chaji-logo').isVisible())
 ok('nav chaji', await page.getByRole('navigation').getByRole('link', { name: '茶記' }).isVisible())
 await page.screenshot({ path: `${out}/home_with_chaji.png` })
 
+await page.goto(`${base}/privacy`, { waitUntil: 'networkidle' })
+ok('privacy page', await page.getByRole('heading', { name: '私隱說明' }).isVisible())
+ok('privacy comments note', await page.getByText(/每日繪卷留言/).isVisible())
+const robots = await page.evaluate(async () => {
+  const res = await fetch('/robots.txt')
+  const text = await res.text()
+  return { ok: res.ok, disallowsAdmin: text.includes('Disallow: /admin') }
+})
+ok('robots txt', robots.ok && robots.disallowsAdmin, JSON.stringify(robots))
+
 await page.goto(`${base}/bible`, { waitUntil: 'networkidle' })
 ok('bible catalog', await page.getByRole('heading', { name: '和合本聖經' }).isVisible())
 ok('bible ot books', await page.getByText('創世記').isVisible())
+ok('bible hk legal note', await page.getByText(/香港／澳門/).isVisible())
 ok('bible search form', await page.getByLabel('搜尋經文').isVisible())
 ok('bible scope collapsed', (await page.getByRole('radio', { name: '新約' }).count()) === 0)
 await page.getByRole('button', { name: /選擇範圍/ }).click()

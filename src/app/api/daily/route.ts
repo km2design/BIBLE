@@ -12,7 +12,7 @@ function isIsoDate(value: string): boolean {
 
 export async function GET(request: Request) {
   const ip = clientIp(request)
-  const allowed = await takeRateLimit(`daily:${ip}`, 30, 60_000)
+  const allowed = await takeRateLimit(`daily:${ip}`, 60, 60_000)
   if (!allowed) {
     return NextResponse.json({ error: '請求過於頻繁，請稍後再試' }, { status: 429 })
   }

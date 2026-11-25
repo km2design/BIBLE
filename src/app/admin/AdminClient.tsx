@@ -72,7 +72,7 @@ export function AdminClient() {
   const [replyBody, setReplyBody] = useState('')
   const [replyParent, setReplyParent] = useState<string | null>(null)
   const [settings, setSettings] = useState<AdminAppSettings>({
-    publishMode: 'open',
+    publishMode: 'approve_required',
     autoGenImage: false,
   })
   const [weekItems, setWeekItems] = useState<WeekStoryItem[]>([])
@@ -649,6 +649,18 @@ export function AdminClient() {
               核准草稿並同步
             </button>
           </div>
+
+          <h2 className="admin-section-title">每日營運（模式 B）</h2>
+          <ol className="admin-ops-list">
+            <li>建議每晚：一週預覽 → 預產文字 → 單日批改 → GEN 圖 → 儲存核准（至少核准「明日」）。</li>
+            <li>未核准的日子，公開／daily 會顯示「尚未核准」；cron 只輔助寫草稿／插畫，不能代替核准。</li>
+            <li>
+              GitHub Actions「Daily Grok story」需同時設定 repo secrets：
+              <code>CRON_SECRET</code>（與 App 相同）與 <code>APP_URL</code>
+              （例如 https://guangdao.apps.grok.bot）。缺一則排程會靜默略過。請在 Actions
+              手動 Run workflow 驗證一次。
+            </li>
+          </ol>
         </section>
       ) : null}
 

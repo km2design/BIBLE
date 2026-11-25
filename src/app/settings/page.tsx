@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { bgmPresets, naturePresets } from '../../data/audioPresets'
 import { useAudioSettings } from '../../context/AudioSettings'
@@ -149,6 +150,17 @@ export default function SettingsPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="settings-block">
+        <h2>關於資料</h2>
+        <p className="settings-hint">
+          背景樂為光道專用襯底；大自然環境聲為 CC0。訪客無需註冊。詳見
+          <Link href="/privacy" className="text-link">
+            私隱說明
+          </Link>
+          。
+        </p>
       </section>
     </main>
   )

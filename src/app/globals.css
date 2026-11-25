@@ -69,6 +69,73 @@ p {
   margin: 0;
 }
 
+.site-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.25rem 5.75rem;
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+}
+
+.site-footer a {
+  color: var(--gold-soft);
+}
+
+.legal-page {
+  padding: 1.25rem 1.25rem 5.5rem;
+}
+
+.legal-block {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.legal-block h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.55rem;
+}
+
+.legal-block ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--ink-muted);
+  line-height: 1.7;
+}
+
+.legal-block li + li {
+  margin-top: 0.45rem;
+}
+
+.legal-updated {
+  margin-top: 0.85rem;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+.admin-ops-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--ink-muted);
+  line-height: 1.65;
+  font-size: 0.9rem;
+}
+
+.admin-ops-list li + li {
+  margin-top: 0.45rem;
+}
+
+.admin-ops-list code {
+  font-size: 0.82rem;
+  color: var(--gold-soft);
+}
+
+.bible-legal-note {
+  margin-top: 0.35rem !important;
+}
+
 .app-shell {
   min-height: 100dvh;
   max-width: 480px;
