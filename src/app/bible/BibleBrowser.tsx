@@ -88,7 +88,13 @@ export function BibleBrowser() {
       </ul>
 
       {index ? (
-        <p className="bible-attribution">{index.attribution}</p>
+        <>
+          <p className="bible-attribution">{index.attribution}</p>
+          <p className="bible-attribution bible-legal-note">
+            香港／澳門地區：香港聖經公會等或主張相關權利；本 App 依 eBible.org
+            公眾領域標示再分發繁體新標點和合本，僅供靈修閱讀。
+          </p>
+        </>
       ) : null}
     </main>
   )

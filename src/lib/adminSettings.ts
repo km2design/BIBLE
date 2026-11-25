@@ -13,7 +13,8 @@ const SETTINGS_KEY = 'admin'
 function parseSettings(raw: unknown): AdminAppSettings {
   const value = (raw && typeof raw === 'object' ? raw : {}) as Partial<AdminAppSettings>
   return {
-    publishMode: value.publishMode === 'approve_required' ? 'approve_required' : 'open',
+    // Only explicit Mode A opts into open publish; anything else stays Mode B.
+    publishMode: value.publishMode === 'open' ? 'open' : 'approve_required',
     autoGenImage: Boolean(value.autoGenImage),
   }
 }

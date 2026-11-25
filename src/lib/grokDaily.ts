@@ -301,8 +301,7 @@ export async function getDailyStory(
 ): Promise<{ story: DailyStory | null; source: string; unavailable?: boolean }> {
   const today = dateKey()
   const safeDate = isIsoDate(date) ? date : today
-  // One-shot: Mode B + purge sample/grok + refresh stale approved from 2026-11-18.
-  await ensurePublicSyncOnce()
+  // Public path must not run DB cutover/sync — that stays on cron / admin only.
   const { publishMode } = await getAdminSettings()
 
   const cached = await readCache(safeDate)

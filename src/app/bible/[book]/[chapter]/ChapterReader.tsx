@@ -148,7 +148,14 @@ export function ChapterReader({ bookId, chapter }: { bookId: string; chapter: nu
         )}
       </nav>
 
-      {index ? <p className="bible-attribution">{index.attribution}</p> : null}
+      {index ? (
+        <>
+          <p className="bible-attribution">{index.attribution}</p>
+          <p className="bible-attribution bible-legal-note">
+            香港／澳門：或有版權主張；此處依 eBible 公眾領域文本供靈修閱讀。
+          </p>
+        </>
+      ) : null}
     </main>
   )
 }

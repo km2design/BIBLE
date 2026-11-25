@@ -9,23 +9,24 @@
   - 本地資產：`public/bible/cuv/`（目錄 + 66 卷 JSON + `search-corpus.json`），閱讀／搜尋皆走同源靜態檔（`cache: 'force-cache'`），不打遠端經文 API
   - 搜尋：全書／舊約／新約／本卷／章節範圍；結果連到章節 `#vN`
   - 重建搜尋語料：`npm run bible:corpus`
-  - 署名見閱讀頁與 `public/bible/cuv/SOURCE.md`
+  - 署名見閱讀頁與 `public/bible/cuv/SOURCE.md`（含香港／澳門版權提示）
 - **每日繪卷**：故事驅動插畫＋角色走進日常情境，帶出提醒、警告、勸戒、鼓勵、安慰、同理、名言與反思
 - **當日靈修**：每篇故事附默想與短禱
 - **往日繪卷**：`/daily/archive` 與日期選擇，重讀已封存故事與其插畫
+- **私隱說明**：`/privacy`（訪客無帳戶；留言／頻率限制／瀏覽計數說明）
 - **PWA**：可加到主畫面（manifest + icons + 輕量 service worker；`/api/*` 不攔截）
 - **管理後台** `/admin`：隔日繪卷預先生成（文字＋插畫預覽／可重產）、批改全部文稿後核准、留言回覆與刪除（需 `ADMIN_USERNAME`／`ADMIN_PASSWORD`；缺密鑰則後台關閉，公開站仍可用）
-  - **發布模式**：模式 A（預產可公開）／模式 B（必須核准；sample／grok 不上街）
-  - **同步公開**：設定頁「同步公開（清未核准）」→ `POST /api/admin/story/sync-public`（自 `2026-11-18` 鎖定模式 B、刪 sample／grok、刷新舊公仔核准稿）。亦可「核准草稿並同步」。發布後首次 `/api/daily` 或 cron 會自動跑一次同等同步（`public_sync_v1`）。
-  - **往日＋統計**：全部已存故事列表（展開留言）、近 30 日瀏覽／留言數；瀏覽於公開 `/api/daily` 成功讀取時累計（同 IP 每小時同日最多 1 次）
+  - **發布模式**：預設／設定讀取失敗時為模式 B（必須核准）。模式 A 需明確選擇。
+  - **每日營運（模式 B）**：每晚一週預產 → 單日批改 → GEN 圖 → 儲存核准（至少核准明日）；說明見後台「設定」。
+  - **同步公開**：設定頁按鈕／`POST /api/admin/story/sync-public`；一次性 DB 同步亦由 **cron** 觸發（不在公開 `/api/daily`）。
+  - **往日＋統計**：全部已存故事列表（展開留言）、近 30 日瀏覽／留言數
 - **留言**：可分享反思；細字標明規則（禁止粗口等，違規由版主刪除）
 - **Grok 生成（可自動化）**：設定 `XAI_API_KEY` 後由 Grok 生成當日故事與插畫；未設定則示範故事＋預設英雄圖
-  - 排程端點：`POST /api/cron/daily-story`（需 `CRON_SECRET`）— **每天一次**文字＋插畫（約 US$0.04–0.05／圖，不在每次頁面瀏覽觸發）
-  - 插畫：`grok-imagine-image-2.0`，風格參考 `public/daily/default-hero.jpg`，存入 `daily_stories.image_bytes`
-  - GitHub Actions：`.github/workflows/daily-story.yml`（香港時間約 00:10）
+  - 排程端點：`POST /api/cron/daily-story`（需 `CRON_SECRET`，timing-safe 比對；每小時最多 3 次）
+  - GitHub Actions：`.github/workflows/daily-story.yml`（約 00:10 HKT）— repo 需同時設 `CRON_SECRET` 與 `APP_URL`，缺一則 workflow **失敗退出**；首次上線請手動 Run workflow 驗證（應回 200 JSON）
   - 「今日」依 `Asia/Hong_Kong` 日曆計算
-- **四福音繪卷**：耶穌生平分幕＋經文同步
-- **音效設定**：10 首背景 MP3、動畫音效、CC0 真實大自然環境錄音（可循環）
+- **茶記大作戰**：Shorts 目錄與播放
+- **音效設定**：光道專用 BGM（見 `public/audio/bgm/SOURCE.md`）＋ CC0 大自然環境聲（`public/audio/nature/SOURCE.md`）
 
 ## 開發
 
